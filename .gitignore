@@ -1,0 +1,11 @@
+**/Debug
+**/Release
+*.elf
+*.hex
+*.eep
+*.o
+*.d
+*.cproj
+*.log
+
+ATMega32_LCC.componentinfo.xml
