@@ -42,6 +42,7 @@ typedef struct _iv3a{
 	uint8_t			foo;
 	digitMode_t		mode;
 	uint8_t			mask;
+	uint32_t 		blink_timer;
 } iv3a_t;
 
 #define IV3A_HH				0
@@ -53,7 +54,6 @@ typedef struct _iv3a{
 
 iv3a_t 		iv3a[6];
 uint8_t 	iv3a_loop_pointer = 0;
-uint16_t 	iv3a_blink_timer = 0;
 
 void IV3aInit(void){
 	IV3A_GRID_DDR|=((1<<GRID_HH)|(1<<GRID_HL)|
@@ -80,8 +80,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_ON:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_OFF;
 		}else{
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
@@ -91,8 +91,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_OFF:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_ON;
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
 		}
@@ -110,8 +110,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_POINT_ON:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_POINT_OFF;
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
 		}else{
@@ -121,8 +121,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_POINT_OFF:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_POINT_ON;
 			_tmp = HC595GetDigitMask(iv3a->foo, 1);
 		}else{
@@ -137,8 +137,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_CHAR_BLINKING_ON:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_CHAR_BLINKING_OFF;
 		}else{
 			_tmp = HC595GetCharMask(iv3a->foo, 0);
@@ -147,8 +147,8 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_CHAR_BLINKING_OFF:
 	{
-		if((millis()-iv3a_blink_timer) >= BLINK_HALFPERIOD_MS){
-			iv3a_blink_timer = millis();
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_CHAR_BLINKING_ON;
 			_tmp = HC595GetCharMask(iv3a->foo, 0);
 		}
@@ -165,50 +165,50 @@ void IV3aDispLoop(void){
 	switch(iv3a_loop_pointer){
 	case 0:	// HH
 	{
-		IV3A_GRID_PORT |= (1 << PC2);			// OFF previous grid (now all gids are OFF)
+		IV3A_GRID_PORT |= (1 << GRID_SL);			// OFF previous grid (now all gids are OFF)
 		IV3aHC595UpdMask(&iv3a[IV3A_HH]);			// update output bitmask (anodes)
 		HC595Write(iv3a[IV3A_HH].mask);			// write output bitmask to 74HC595 shifting register
-		IV3A_GRID_PORT &= (~(1 << PC7));			// ON next grid
+		IV3A_GRID_PORT &= (~(1 << GRID_HH));			// ON next grid
 		break;
 	}
 	case 1:	// HL
 	{
-		IV3A_GRID_PORT |= (1 << PC7);
+		IV3A_GRID_PORT |= (1 << GRID_HH);
 		IV3aHC595UpdMask(&iv3a[IV3A_HL]);
 		HC595Write(iv3a[IV3A_HL].mask);
-		IV3A_GRID_PORT &= (~(1 << PC6));
+		IV3A_GRID_PORT &= (~(1 << GRID_HL));
 		break;
 	}
 	case 2:	// MH
 	{
-		IV3A_GRID_PORT |= (1 << PC6);
+		IV3A_GRID_PORT |= (1 << GRID_HL);
 		IV3aHC595UpdMask(&iv3a[IV3A_MH]);
 		HC595Write(iv3a[IV3A_MH].mask);
-		IV3A_GRID_PORT &= (~(1 << PC5));
+		IV3A_GRID_PORT &= (~(1 << GRID_MH));
 		break;
 	}
 	case 3:	// ML
 	{
-		IV3A_GRID_PORT |= (1 << PC5);
+		IV3A_GRID_PORT |= (1 << GRID_MH);
 		IV3aHC595UpdMask(&iv3a[IV3A_ML]);
 		HC595Write(iv3a[IV3A_ML].mask);
-		IV3A_GRID_PORT &= (~(1 << PC4));
+		IV3A_GRID_PORT &= (~(1 << GRID_ML));
 		break;
 	}
 	case 4:	// SH
 	{
-		IV3A_GRID_PORT |= (1 << PC4);
+		IV3A_GRID_PORT |= (1 << GRID_ML);
 		IV3aHC595UpdMask(&iv3a[IV3A_SH]);
 		HC595Write(iv3a[IV3A_SH].mask);
-		IV3A_GRID_PORT &= (~(1 << PC3));
+		IV3A_GRID_PORT &= (~(1 << GRID_SH));
 		break;
 	}
 	case 5:	// SL
 	{
-		IV3A_GRID_PORT |= (1 << PC3);
+		IV3A_GRID_PORT |= (1 << GRID_SH);
 		IV3aHC595UpdMask(&iv3a[IV3A_SL]);
 		HC595Write(iv3a[IV3A_SL].mask);
-		IV3A_GRID_PORT &= (~(1 << PC2));
+		IV3A_GRID_PORT &= (~(1 << GRID_SL));
 		iv3a_loop_pointer = 0xFF;				// reset loop pointer
 		break;
 	}

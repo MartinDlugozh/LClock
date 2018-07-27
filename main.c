@@ -14,7 +14,7 @@
 #define PERIOD_50HZ_MS 		20
 #define PERIOD_1HZ_MS 		1000
 
-#define SELFTEST_ENABLE		1
+#define SELFTEST_ENABLE		0
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -289,6 +289,18 @@ int main(void)
 	millis_init();		// start system millis() on timer0
 	i2c_init();			// start TWI
 	rtc3231_init();		// start DS3231 RTC
+//	rtc_date.year = 48;
+//	rtc_date.month = 7;
+//	rtc_date.day = 27;
+//	rtc_date.wday = 5;
+//	rtc_time.hour = 18;
+//	rtc_time.min = 0;
+//	rtc_time.sec = 0;
+//	rtc3231_write_date(&rtc_date);
+//	rtc3231_write_time(&rtc_time);
+	rtc3231_read_datetime(&rtc_time, &rtc_date);
+	now = rtcMakeTime(&rtc_time, &rtc_date);
+	rtc_update_timer = now;
 	IV3aInit();			// start IV-3A luminescent display
 
 	sys_timer.loop_333Hz = millis();				// initialize system timer
@@ -303,6 +315,7 @@ int main(void)
 		iv3a[i].foo = selftest_counter;
 	}
 #endif
+	dispSetMode(DMODE_TIME);
 
 	// Main loop
     for(;;)

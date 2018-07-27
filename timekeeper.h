@@ -9,7 +9,7 @@
 #ifndef TIMEKEEPER_H_
 #define TIMEKEEPER_H_
 
-#define RTC_TIME_UPDATE_PERIOD_S		300
+#define RTC_TIME_UPDATE_PERIOD_S		30
 
 #define SECS_PER_MIN  ((time_t)(60UL))
 #define SECS_PER_HOUR ((time_t)(3600UL))
