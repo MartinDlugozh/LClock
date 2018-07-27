@@ -30,12 +30,12 @@ typedef enum _digitMode{
 	MODE_BLINKING_OFF,			// display blinking decimal digit (off halfperiod)
 	MODE_OFF_POINT,				// display only point
 	MODE_ON_POINT,				// display decimal digit with point
-	MODE_BLINKING_POINT_ON,		// display blinking decimal digit with point (on halfperiod)
-	MODE_BLINKING_POINT_OFF,	// display blinking decimal digit with point (off halfperiod)
+	MODE_BLINKING_POINT_ON,		// display decimal digit with blinking point (on halfperiod)
+	MODE_BLINKING_POINT_OFF,	// display decimal digit with blinking point (off halfperiod)
 	MODE_CHAR,					// display character
 	MODE_CHAR_BLINKING_ON,		// display blinking character (on halfperiod)
 	MODE_CHAR_BLINKING_OFF,		// display blinking character (off halfperiod)
-	MODE_ENUM_END = 255
+	MODE_ENUM_END = 0xFF
 }digitMode_t;
 
 typedef struct _iv3a{
