@@ -1,4 +1,4 @@
-/*
+п»ї/*
  * ATMega32_LCC.c
  *
  * Created: 11.07.2018 9:45:56
@@ -20,6 +20,7 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <time.h>
+#include <delay.h>
 
 #include <stdbool.h>
 
@@ -28,6 +29,7 @@
 #include "i2c.h"
 #include "rtc3231.h"
 #include "timekeeper.h"
+#include "ds18b20.h"
 
 volatile bool dte_flag = false;		// push-pull dead-time flag
 
@@ -140,8 +142,8 @@ void dispSetMode(dispMode_t mode){
 /**
  * Timer2 on compare interrupt handler
  * 
- * Используется для формирования комплементраного ШИМ на 
- * PD4 и PD5 с dead-time для управления ключами трансформатора.
+ * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РєРѕРјРїР»РµРјРµРЅС‚СЂР°РЅРѕРіРѕ РЁРРњ РЅР° 
+ * PD4 Рё PD5 СЃ dead-time РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РєР»СЋС‡Р°РјРё С‚СЂР°РЅСЃС„РѕСЂРјР°С‚РѕСЂР°.
  */
 ISR(TIMER2_COMP_vect){
 	if(OCR2 == TIM_DT){
@@ -172,7 +174,7 @@ void loop_333Hz(void){
  *
  */
 void loop_50Hz(void){
-	// Обработка кнопок
+	// Buttons reading code
 }
 
 /**
@@ -195,12 +197,12 @@ void loop_1Hz(void){
 	}else if(selftest_counter < 60){
 		iv3a[IV3A_SL].foo = (selftest_counter++ - 50);
 	}else if(selftest_counter == 60){
-		dispSetMode(DMODE_TIME);		// после селфтеста переключаемся на отображение времени
-		selftest_counter++;				// делаем заглушку (желательно выбросить из релизной сборки)
+		dispSetMode(DMODE_TIME);		
+		selftest_counter++;				
 	}
 #endif
 	
-	update_time();	// процедура обновлеиня времени часов должна вызываться каджую секунду!
+		update_time();	// РїСЂРѕС†РµРґСѓСЂР° РѕР±РЅРѕРІР»РµРёРЅСЏ РІСЂРµРјРµРЅРё С‡Р°СЃРѕРІ РґРѕР»Р¶РЅР° РІС‹Р·С‹РІР°С‚СЊСЃСЏ РєР°РґР¶СѓСЋ СЃРµРєСѓРЅРґСѓ!
 
 	switch(disp_mode){
 		case DMODE_TIME:
@@ -285,6 +287,7 @@ void power_init(void){
 
 int main(void)
 {
+	_delay_ms(2000);	// pre-start delay (for BMP180 hardware initialization)
 	power_init();		// start complementary pwm on timer2
 	millis_init();		// start system millis() on timer0
 	i2c_init();			// start TWI
@@ -301,6 +304,10 @@ int main(void)
 	rtc3231_read_datetime(&rtc_time, &rtc_date);
 	now = rtcMakeTime(&rtc_time, &rtc_date);
 	rtc_update_timer = now;
+
+	// start BMP180 pressure and temperature sensor
+	ds18b20_init(&ds18b20, PA0);	// start DS18B20 temperature sensor
+
 	IV3aInit();			// start IV-3A luminescent display
 
 	sys_timer.loop_333Hz = millis();				// initialize system timer

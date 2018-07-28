@@ -30,26 +30,21 @@
 
 static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31};
 
-struct now_time
-{
+struct now_time{
 	uint8_t sec;
 	uint8_t min;
 	uint8_t hour;
 }now_time;
 
-struct now_date
-{
+struct now_date{
 	uint8_t wday;
 	uint8_t day;
 	uint8_t month;
 	uint8_t year;
 }now_date;
 
-//struct rtc_time now_rtc_time;
-//struct rtc_date now_rtc_date;
-
 time_t rtc_update_timer = 0;
-time_t now = 0;
+time_t now = 0;				// UTC (seconds since 1970)
 
 time_t rtcMakeTime(struct rtc_time *time, struct rtc_date *date){
 	// assemble time elements into time_t
