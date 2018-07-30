@@ -53,7 +53,7 @@ void rtc3231_init(void)
 	i2c_stop_condition();
 }
 
-void rtc3231_read_time(struct rtc_time *time)
+void rtc3231_read_time(rtc_time_t *time)
 {
 	i2c_start_condition();
 	i2c_send_byte(RTC_WADDR);
@@ -68,7 +68,7 @@ void rtc3231_read_time(struct rtc_time *time)
 	i2c_stop_condition();
 }
 
-void rtc3231_read_date(struct rtc_date *date)
+void rtc3231_read_date(rtc_date_t *date)
 {
 	i2c_start_condition();
 	i2c_send_byte(RTC_WADDR);
@@ -88,7 +88,7 @@ void rtc3231_read_date(struct rtc_date *date)
 	i2c_stop_condition();
 }
 
-void rtc3231_read_datetime(struct rtc_time *time, struct rtc_date *date)
+void rtc3231_read_datetime(rtc_time_t *time, rtc_date_t *date)
 {
 	i2c_start_condition();
 	i2c_send_byte(RTC_WADDR);
@@ -108,7 +108,7 @@ void rtc3231_read_datetime(struct rtc_time *time, struct rtc_date *date)
 	i2c_stop_condition();
 }
 
-void rtc3231_write_time(struct rtc_time *time)
+void rtc3231_write_time(rtc_time_t *time)
 {
     i2c_start_condition();
     i2c_send_byte(RTC_WADDR);
@@ -119,7 +119,7 @@ void rtc3231_write_time(struct rtc_time *time)
     i2c_stop_condition();
 }
 
-void rtc3231_write_date(struct rtc_date *date)
+void rtc3231_write_date(rtc_date_t *date)
 {
 	i2c_start_condition();
     i2c_send_byte(RTC_WADDR);

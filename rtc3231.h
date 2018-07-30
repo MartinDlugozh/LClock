@@ -19,18 +19,21 @@
 #define RTC_WADDR 0b11010000
 #define RTC_RADDR 0b11010001
 
-struct rtc_time{
+typedef struct _rtc_time{
 	uint8_t sec;
 	uint8_t min;
 	uint8_t hour;
-}rtc_time;
+}rtc_time_t;
 
-struct rtc_date{
+typedef struct _rtc_date{
 	uint8_t wday;
 	uint8_t day;
 	uint8_t month;
 	uint8_t year;
-}rtc_date;
+}rtc_date_t;
+
+rtc_time_t rtc_time;
+rtc_date_t rtc_date;
 
 /*
  * Clock initialization
@@ -41,32 +44,32 @@ void rtc3231_init(void);
  * Reading time from clock
  * @time: time structure with reading data
  */
-void rtc3231_read_time(struct rtc_time *time);
+void rtc3231_read_time(rtc_time_t *time);
 
 /**
  * Reading date from clock
  * @date: date structure with reading data
  */
-void rtc3231_read_date(struct rtc_date *date);
+void rtc3231_read_date(rtc_date_t *date);
 
 /**
  * Reading date and time from clock
  * @time: time structure with reading data
  * @date: date structure with reading data
  */
-void rtc3231_read_datetime(struct rtc_time *time, struct rtc_date *date);
+void rtc3231_read_datetime(rtc_time_t *time, rtc_date_t *date);
 
 /**
  * Writing new time in clock
  * @time: time structure for writing data
  */
-void rtc3231_write_time(struct rtc_time *time);
+void rtc3231_write_time(rtc_time_t *time);
 
 /**
  * Writing new date in clock
  * @date: date structure for writing data
  */
-void rtc3231_write_date(struct rtc_date *date);
+void rtc3231_write_date(rtc_date_t *date);
 
 
 #endif

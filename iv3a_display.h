@@ -28,6 +28,8 @@ typedef enum _digitMode{
 	MODE_ON = 1,				// display decimal digit
 	MODE_BLINKING_ON,			// display blinking decimal digit (on halfperiod)
 	MODE_BLINKING_OFF,			// display blinking decimal digit (off halfperiod)
+	MODE_BLINKING_PON,			// display blinking decimal digit with point (on halfperiod)
+	MODE_BLINKING_POFF,			// display blinking decimal digit with point (off halfperiod)
 	MODE_OFF_POINT,				// display only point
 	MODE_ON_POINT,				// display decimal digit with point
 	MODE_BLINKING_POINT_ON,		// display decimal digit with blinking point (on halfperiod)
@@ -54,6 +56,37 @@ typedef struct _iv3a{
 
 iv3a_t 		iv3a[6];
 uint8_t 	iv3a_loop_pointer = 0;
+
+void breakNumber2(uint8_t n, uint8_t *h, uint8_t *l)
+{
+	*h = (uint8_t)(n/10);
+	*l = (uint8_t)(n%10);
+}
+
+void breakSNumber2(int8_t n, uint8_t *h, uint8_t *l, uint8_t *s)
+{
+	int8_t _tmp = n;
+	if(n < 0){
+		*s = (uint8_t)('-');
+		_tmp *= (-1);
+	}else{
+		*s = 0xFF;	// NAN
+	}
+	*h = (uint8_t)(_tmp/10);
+	*l = (uint8_t)(_tmp%10);
+}
+
+void breakNumber4(uint16_t n, uint8_t *hh, uint8_t *hl, uint8_t *lh, uint8_t *ll)
+{
+	uint16_t _tmp;
+	*hh = (uint8_t)(n/1000);
+	_tmp = (uint16_t)(n%1000);
+	*hl = (uint8_t)(_tmp/100);
+	_tmp = (uint16_t)(_tmp%100);
+	*lh = (uint8_t)(_tmp/10);
+	*ll = (uint8_t)(_tmp%10);
+}
+
 
 void IV3aInit(void){
 	IV3A_GRID_DDR|=((1<<GRID_HH)|(1<<GRID_HL)|
@@ -86,7 +119,6 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 		}else{
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
 		}
-
 		break;
 	}
 	case MODE_BLINKING_OFF:
@@ -95,6 +127,25 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_ON;
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
+		}
+		break;
+	}
+	case MODE_BLINKING_PON:
+	{
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
+			iv3a->mode = MODE_BLINKING_OFF;
+			}else{
+			_tmp = HC595GetDigitMask(iv3a->foo, 1);
+		}
+		break;
+	}
+	case MODE_BLINKING_POFF:
+	{
+		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+			iv3a->blink_timer = millis();
+			iv3a->mode = MODE_BLINKING_ON;
+			_tmp = HC595GetDigitMask(iv3a->foo, 1);
 		}
 		break;
 	}

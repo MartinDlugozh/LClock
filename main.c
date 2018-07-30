@@ -7,9 +7,6 @@
 
 #define F_CPU 16000000UL
 
-#define TIM_DT ((F_CPU / 55556UL) / 8)-1		// 55556UL
-#define TIM_PU ((F_CPU / 500000UL) / 8)-1
-
 #define PERIOD_333HZ_MS		2
 #define PERIOD_50HZ_MS 		20
 #define PERIOD_1HZ_MS 		1000
@@ -25,13 +22,12 @@
 #include <stdbool.h>
 
 #include "millis.h"
+#include "ptc.h"
 #include "iv3a_display.h"
 #include "i2c.h"
 #include "rtc3231.h"
 #include "timekeeper.h"
 #include "ds18b20.h"
-
-volatile bool dte_flag = false;		// push-pull dead-time flag
 
 // Main loop timers
 struct {
@@ -46,92 +42,165 @@ struct {
 	uint8_t selftest_counter = 0;		// debug only
 #endif
 
-typedef enum _dispMode{
-	DMODE_TIME = 0,
-	DMODE_DATE,
-	DMODE_ALARM,
-	DMODE_TEMPERATURE_A,
-	DMODE_TEMPERATURE_B,
-	DMODE_PRESSURE,
+typedef enum _dispMode{			// indication modes ("main menu")
+	DMODE_TIME = 0,				// 0..5 - main modes
+	DMODE_DATE = 1,
+	DMODE_ALARM = 2,
+	DMODE_TEMPERATURE_A = 3,
+	DMODE_TEMPERATURE_B = 4,
+	DMODE_PRESSURE = 5,
+	DMODE_CTIME,				// other - for dispSetMode() switch statement optimization 
+	DMODE_CTEMPERATURE,
 	DMODE_OFF = 0xFE,
 	DMODE_ENUM_END = 0xFF
 } dispMode_t;
 
-uint8_t disp_mode = 0;				// time/date/alarm/temperature/pressure
+typedef enum _setMode{			// adjustment modes
+	SMODE_NO = 0,				// normal indication mode (no adjustment)
+	SMODE_SS,					// adjust second/year
+	SMODE_MM,					// adjust minute/month
+	SMODE_HH,					// adjust hour/day
+	SMODE_TEMP,					// adjust temperature (A or B)
+	SMODE_PRESS,				// adjust pressure
+	SMODE_ENUM_END = 0xFF
+} setMode_t;
 
-void breakNumber(uint8_t n, uint8_t *h, uint8_t *l)
-{
-	*h = (uint8_t)(n/10);
-	*l = (uint8_t)(n%10);
-}
+uint8_t disp_mode = 0;			// time/date/alarm/temperature/pressure
+uint8_t set_mode = 0;			// adjustment mode
 
-void dispSetMode(dispMode_t mode){
-	disp_mode = mode;
-	switch(mode){
-	case DMODE_TIME:
+int8_t temp_a = 0;				// temperature from DS18B20 (external)
+int8_t temp_b = 0;				// temperature from BMP180 (internal)
+uint16_t pressure = 0;			// barometric pressure from BMP180
+
+/**
+ * Set indication mode
+ * 
+ * iv3a[n].mode manager. Used for updating tube control structures
+ * according to indication and adjustment modes.
+ *	Input:
+ *		dispMode_t dmode - indication mode;
+ *		setMode_t smode - adjustment mode.
+ *	Return:
+ *		none.
+ */
+void dispSetMode(dispMode_t dmode, setMode_t smode){
+	dispMode_t _dmode;
+	disp_mode = dmode;
+	set_mode = smode;
+
+	if((dmode == DMODE_TIME) ||
+		(dmode == DMODE_DATE) ||
+		(dmode == DMODE_ALARM)){
+		_dmode = DMODE_CTIME;
+	}else if((dmode == DMODE_TEMPERATURE_A) || (dmode == DMODE_TEMPERATURE_B)){
+		_dmode = DMODE_CTEMPERATURE;
+	}else{
+		_dmode = dmode;
+	}
+
+	switch(_dmode){
+	case DMODE_CTIME:
 	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_SL].mode = MODE_ON; // ? =)
-
+		switch(smode){
+		case SMODE_NO:
+		{
+			iv3a[IV3A_HH].mode = MODE_ON;
+			iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
+			iv3a[IV3A_MH].mode = MODE_ON;
+			iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
+			iv3a[IV3A_SH].mode = MODE_ON;				
+			iv3a[IV3A_SL].mode = MODE_ON;
+			break;
+		}
+		case SMODE_SS:
+		{
+			iv3a[IV3A_HH].mode = MODE_ON;
+			iv3a[IV3A_HL].mode = MODE_ON_POINT;
+			iv3a[IV3A_MH].mode = MODE_ON;
+			iv3a[IV3A_ML].mode = MODE_ON_POINT;
+			iv3a[IV3A_SH].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_SL].mode = MODE_BLINKING_ON;
+			break;
+		}
+		case SMODE_MM:
+		{
+			iv3a[IV3A_HH].mode = MODE_ON;
+			iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
+			iv3a[IV3A_MH].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_ML].mode = MODE_BLINKING_PON;
+			iv3a[IV3A_SH].mode = MODE_ON;
+			iv3a[IV3A_SL].mode = MODE_ON;
+			break;
+		}
+		case SMODE_HH:
+		{
+			iv3a[IV3A_HH].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_HL].mode = MODE_BLINKING_PON;
+			iv3a[IV3A_MH].mode = MODE_ON;
+			iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
+			iv3a[IV3A_SH].mode = MODE_ON;
+			iv3a[IV3A_SL].mode = MODE_ON;
+			break;
+		}
+		default:
+			break;
+		}
 		break;
 	}
-	case DMODE_DATE:
+	case DMODE_CTEMPERATURE:
 	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_SL].mode = MODE_ON; // ? =)
-
-		break;
-	}
-	case DMODE_ALARM:
-	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
-		iv3a[IV3A_SL].mode = MODE_ON; // ? =)
-
-		break;
-	}
-	case DMODE_TEMPERATURE_A:
-	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_ON;
-		iv3a[IV3A_ML].mode = MODE_CHAR;
-		iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
-		break;
-	}
-	case DMODE_TEMPERATURE_B:
-	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_ON;
-		iv3a[IV3A_ML].mode = MODE_CHAR;
-		iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
+		switch(smode){
+		case SMODE_NO:
+		{
+			iv3a[IV3A_HH].mode = MODE_CHAR;
+			iv3a[IV3A_HL].mode = MODE_CHAR;
+			iv3a[IV3A_MH].mode = MODE_ON;
+			iv3a[IV3A_ML].mode = MODE_ON;
+			iv3a[IV3A_SH].mode = MODE_CHAR;
+			iv3a[IV3A_SL].mode = MODE_CHAR;
+			break;
+		}
+		case SMODE_TEMP:
+		{
+			iv3a[IV3A_HH].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_MH].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_SH].mode = MODE_CHAR;
+			iv3a[IV3A_HL].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_ML].mode = MODE_BLINKING_ON;
+			iv3a[IV3A_SL].mode = MODE_CHAR;
+			break;
+		}
+		default:
+			break;
+		}
 		break;
 	}
 	case DMODE_PRESSURE:
-	{
-		iv3a[IV3A_HH].mode = MODE_ON;
-		iv3a[IV3A_MH].mode = MODE_ON;
-		iv3a[IV3A_SH].mode = MODE_ON;
-		iv3a[IV3A_HL].mode = MODE_ON;
-		iv3a[IV3A_ML].mode = MODE_CHAR;
-		iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
+	{ 
+		switch(smode){
+			case SMODE_NO:
+			{
+				iv3a[IV3A_HH].mode = MODE_ON;
+				iv3a[IV3A_MH].mode = MODE_ON;
+				iv3a[IV3A_SH].mode = MODE_CHAR;
+				iv3a[IV3A_HL].mode = MODE_ON;
+				iv3a[IV3A_ML].mode = MODE_ON;
+				iv3a[IV3A_SL].mode = MODE_CHAR;
+				break;
+			}
+			case SMODE_TEMP:
+			{
+				iv3a[IV3A_HH].mode = MODE_BLINKING_ON;
+				iv3a[IV3A_MH].mode = MODE_BLINKING_ON;
+				iv3a[IV3A_SH].mode = MODE_CHAR;
+				iv3a[IV3A_HL].mode = MODE_BLINKING_ON;
+				iv3a[IV3A_ML].mode = MODE_BLINKING_ON;
+				iv3a[IV3A_SL].mode = MODE_CHAR;
+				break;
+			}
+			default:
+			break;
+		}
 		break;
 	}
 	default:
@@ -139,27 +208,265 @@ void dispSetMode(dispMode_t mode){
 	}
 }
 
-/**
- * Timer2 on compare interrupt handler
- * 
- * Используется для формирования комплементраного ШИМ на 
- * PD4 и PD5 с dead-time для управления ключами трансформатора.
- */
-ISR(TIMER2_COMP_vect){
-	if(OCR2 == TIM_DT){
-		PORTD &= ~(1<<PD4);
-		PORTD &= ~(1<<PD5);
-		OCR2 = TIM_PU;
-	}else{
-		if (dte_flag == true){
-			PORTD |= (1<<PD4);
-		}else{
-			PORTD |= (1<<PD5);
+void dispUpdate(){
+	switch(disp_mode){
+		case DMODE_TIME:
+		{
+			breakNumber2(rtc_time.hour, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo));
+			breakNumber2(rtc_time.min, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			breakNumber2(rtc_time.sec, &(iv3a[IV3A_SH].foo), &(iv3a[IV3A_SL].foo));
+			break;
 		}
-		OCR2 = TIM_DT;
-		dte_flag = !dte_flag;
+		case DMODE_DATE:
+		{
+			breakNumber2(rtc_date.day, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo));
+			breakNumber2(rtc_date.month, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			breakNumber2((rtc_date.year-30), &(iv3a[IV3A_SH].foo), &(iv3a[IV3A_SL].foo));
+			break;
+		}
+		case DMODE_ALARM:
+		{
+			breakNumber2(alarm_time.hour, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo));
+			breakNumber2(alarm_time.min, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			breakNumber2(alarm_time.sec, &(iv3a[IV3A_SH].foo), &(iv3a[IV3A_SL].foo));
+			break;
+		}
+		case DMODE_TEMPERATURE_A:
+		{
+			breakSNumber2(temp_a, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
+			iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
+			break;
+		}
+		case DMODE_TEMPERATURE_B:
+		{
+			breakSNumber2(temp_b, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
+			iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
+			break;
+		}
+		case DMODE_PRESSURE:
+		{
+			breakNumber4(pressure, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo), &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			iv3a[IV3A_SH].foo = 'h'; iv3a[IV3A_SL].foo = 'p';
+			break;
+		}
+		default:
+		break;
 	}
 }
+
+// encoder32 routine
+void encoder_on_inc(void){
+	switch(set_mode){
+		case SMODE_NO:				// normal indication
+		{
+			if(++disp_mode >= 6){
+				disp_mode = 0;
+			}
+			break;
+		}
+		case SMODE_SS:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock seconds
+				{
+					now++;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust years
+				{
+					now += SECS_PER_YEAR;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm seconds
+				{
+					alarm++;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+					break;
+			}
+			break;
+		}
+		case SMODE_MM:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock minutes
+				{
+					now += SECS_PER_MIN;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust months
+				{
+					now += SECS_PER_DAY*30;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm minutes
+				{
+					alarm += SECS_PER_MIN;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+				break;
+			}
+			break;
+		}
+		case SMODE_HH:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock hours
+				{
+					now += SECS_PER_HOUR;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust days
+				{
+					now += SECS_PER_DAY;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm hours
+				{
+					alarm += SECS_PER_HOUR;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+				break;
+			}
+			break;
+		}
+		case SMODE_TEMP:
+		{
+
+			break;
+		}
+		case SMODE_PRESS:
+		{
+
+			break;
+		}
+		default:
+		break;
+	}
+
+	dispUpdate();
+}
+
+// encoder32 routine
+void encoder_on_dec(void){
+	switch(set_mode){
+		case SMODE_NO:				// normal indication
+		{
+			if(disp_mode > 0){
+				disp_mode--;
+			}else{
+				disp_mode = 5;
+			}
+			break;
+		}
+		case SMODE_SS:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock seconds
+				{
+					now--;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust years
+				{
+					now -= SECS_PER_YEAR;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm seconds
+				{
+					alarm--;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+				break;
+			}
+			break;
+		}
+		case SMODE_MM:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock minutes
+				{
+					now -= SECS_PER_MIN;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust months
+				{
+					now -= SECS_PER_DAY*30;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm minutes
+				{
+					alarm -= SECS_PER_MIN;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+				break;
+			}
+			break;
+		}
+		case SMODE_HH:
+		{
+			switch(disp_mode){
+				case DMODE_TIME:				// adjust clock hours
+				{
+					now -= SECS_PER_HOUR;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_DATE:				// adjust days
+				{
+					now -= SECS_PER_DAY;
+					nowBreakTime(now, &rtc_time, &rtc_date);
+					break;
+				}
+				case DMODE_ALARM:				// adjust alarm hours
+				{
+					alarm -= SECS_PER_HOUR;
+					nowBreakTime(alarm, &alarm_time, &alarm_date);
+					break;
+				}
+				default:
+				break;
+			}
+			break;
+		}
+		case SMODE_TEMP:
+		{
+
+			break;
+		}
+		case SMODE_PRESS:
+		{
+
+			break;
+		}
+		default:
+		break;
+	}
+
+	dispUpdate();
+}
+
+#include "encoder32.h"
 
 /**
  * 333 Hz loop 
@@ -202,96 +509,20 @@ void loop_1Hz(void){
 	}
 #endif
 	
-		update_time();	// процедура обновлеиня времени часов должна вызываться каджую секунду!
-
-	switch(disp_mode){
-		case DMODE_TIME:
-		{
-			breakNumber(now_time.hour, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo));
-			breakNumber(now_time.min, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
-			breakNumber(now_time.sec, &(iv3a[IV3A_SH].foo), &(iv3a[IV3A_SL].foo));
-			break;
-		}
-		case DMODE_DATE:
-		{
-			breakNumber(now_date.day, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo));
-			breakNumber(now_date.month, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
-			breakNumber((now_date.year-30), &(iv3a[IV3A_SH].foo), &(iv3a[IV3A_SL].foo));
-			break;
-		}
-		case DMODE_ALARM:
-		{
-			iv3a[IV3A_HH].mode = MODE_ON;
-			iv3a[IV3A_MH].mode = MODE_ON;
-			iv3a[IV3A_SH].mode = MODE_ON;
-			iv3a[IV3A_HL].mode = MODE_BLINKING_POINT_ON;
-			iv3a[IV3A_ML].mode = MODE_BLINKING_POINT_ON;
-			iv3a[IV3A_SL].mode = MODE_ON; // ? =)
-
-			break;
-		}
-		case DMODE_TEMPERATURE_A:
-		{
-			iv3a[IV3A_HH].mode = MODE_ON;
-			iv3a[IV3A_MH].mode = MODE_ON;
-			iv3a[IV3A_SH].mode = MODE_ON;
-			iv3a[IV3A_HL].mode = MODE_ON;
-			iv3a[IV3A_ML].mode = MODE_CHAR;
-			iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
-			break;
-		}
-		case DMODE_TEMPERATURE_B:
-		{
-			iv3a[IV3A_HH].mode = MODE_ON;
-			iv3a[IV3A_MH].mode = MODE_ON;
-			iv3a[IV3A_SH].mode = MODE_ON;
-			iv3a[IV3A_HL].mode = MODE_ON;
-			iv3a[IV3A_ML].mode = MODE_CHAR;
-			iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
-			break;
-		}
-		case DMODE_PRESSURE:
-		{
-			iv3a[IV3A_HH].mode = MODE_ON;
-			iv3a[IV3A_MH].mode = MODE_ON;
-			iv3a[IV3A_SH].mode = MODE_ON;
-			iv3a[IV3A_HL].mode = MODE_ON;
-			iv3a[IV3A_ML].mode = MODE_CHAR;
-			iv3a[IV3A_SL].mode = MODE_CHAR; // ? =)
-
-			break;
-		}
-		default:
-		break;
-	}
+	update_time(upload_flag, set_mode);	// процедура обновлеиня времени часов должна вызываться каджую секунду!
+	dispUpdate();
 }
 
-void power_init(void){
-	cli();
-	// PD4 - MOSFET B
-	// PD5 - MOSFET A
-	PORTD = 0; // set pull-down for PORTD
-	DDRD = (1<<PD4)|(1<<PD5); // set PD4 and PD5 as outputs
 
-	// Configure power transformer control timer (Timer2)
-	TCCR2 = 0; // reset timer
-	TCCR2 = (1<<WGM21)|(1<<CS21); // set CTC WGM on Timer2 and prescaller = 8
-
-	OCR2 = TIM_PU;	// srt initial comparison vlaue
-	TIMSK = 0;		// reset TIMSK
-	TIMSK = (1<<OCIE2);	// enable on compare interrupt
-	sei();
-}
 
 int main(void)
 {
-	_delay_ms(2000);	// pre-start delay (for BMP180 hardware initialization)
+	_delay_ms(500);		// pre-start delay (for BMP180 hardware initialization)
 	power_init();		// start complementary pwm on timer2
 	millis_init();		// start system millis() on timer0
 	i2c_init();			// start TWI
 	rtc3231_init();		// start DS3231 RTC
+
 //	rtc_date.year = 48;
 //	rtc_date.month = 7;
 //	rtc_date.day = 27;
@@ -301,10 +532,13 @@ int main(void)
 //	rtc_time.sec = 0;
 //	rtc3231_write_date(&rtc_date);
 //	rtc3231_write_time(&rtc_time);
+
 	rtc3231_read_datetime(&rtc_time, &rtc_date);
 	now = rtcMakeTime(&rtc_time, &rtc_date);
 	rtc_update_timer = now;
+	alarm = now;
 
+	encoder_init();					// configure encoder ISR
 	// start BMP180 pressure and temperature sensor
 	ds18b20_init(&ds18b20, PA0);	// start DS18B20 temperature sensor
 
@@ -322,7 +556,7 @@ int main(void)
 		iv3a[i].foo = selftest_counter;
 	}
 #endif
-	dispSetMode(DMODE_TIME);
+	dispSetMode(DMODE_TIME, SMODE_NO);
 
 	// Main loop
     for(;;)
