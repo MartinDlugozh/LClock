@@ -9,6 +9,7 @@
 #define IV3A_DISPLAY_H_
 
 #define BLINK_HALFPERIOD_MS 1000
+#define ADJ_BLINK_HALFPERIOD_MS 1000
 
 #define IV3A_GRID_PORT   	PORTC		// PC2..7
 #define IV3A_GRID_DDR    	DDRC
@@ -113,7 +114,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_ON:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_OFF;
 		}else{
@@ -123,7 +124,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_OFF:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_ON;
 			_tmp = HC595GetDigitMask(iv3a->foo, 0);
@@ -132,7 +133,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_PON:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_OFF;
 			}else{
@@ -142,7 +143,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_BLINKING_POFF:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_BLINKING_ON;
 			_tmp = HC595GetDigitMask(iv3a->foo, 1);
@@ -188,7 +189,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_CHAR_BLINKING_ON:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_CHAR_BLINKING_OFF;
 		}else{
@@ -198,7 +199,7 @@ void IV3aHC595UpdMask(iv3a_t *iv3a){
 	}
 	case MODE_CHAR_BLINKING_OFF:
 	{
-		if((millis()-iv3a->blink_timer) >= BLINK_HALFPERIOD_MS){
+		if((millis()-iv3a->blink_timer) >= ADJ_BLINK_HALFPERIOD_MS){
 			iv3a->blink_timer = millis();
 			iv3a->mode = MODE_CHAR_BLINKING_ON;
 			_tmp = HC595GetCharMask(iv3a->foo, 0);

@@ -11,7 +11,7 @@
 #define PERIOD_50HZ_MS 		20
 #define PERIOD_1HZ_MS 		1000
 
-#define SELFTEST_ENABLE		0
+//#define SELFTEST_ENABLE		0
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -38,9 +38,9 @@ struct {
 //	volatile uint8_t buzzer;		// alarm buzzer update timer
 }sys_timer;
 
-#if(SELFTEST_ENABLE == 1)
-	uint8_t selftest_counter = 0;		// debug only
-#endif
+//#if(SELFTEST_ENABLE == 1)
+	//uint8_t selftest_counter = 0;		// debug only
+//#endif
 
 typedef enum _dispMode{			// indication modes ("main menu")
 	DMODE_TIME = 0,				// 0..5 - main modes
@@ -208,7 +208,17 @@ void dispSetMode(dispMode_t dmode, setMode_t smode){
 	}
 }
 
-void dispUpdate(){
+/**
+ * Update display
+ * 
+ * iv3a[n].foo manager. Used for updating tube control structures
+ * according to indication mode and current time/date.
+ *	Input:
+ *		none.
+ *	Return:
+ *		none.
+ */
+void dispUpdate(void){
 	switch(disp_mode){
 		case DMODE_TIME:
 		{
@@ -490,26 +500,26 @@ void loop_50Hz(void){
  */
 void loop_1Hz(void){
 
-#if(SELFTEST_ENABLE == 1)
-	if(selftest_counter < 10){
-		iv3a[IV3A_HH].foo = selftest_counter++;
-	}else if(selftest_counter < 20){
-		iv3a[IV3A_HL].foo = (selftest_counter++ - 10);
-	}else if(selftest_counter < 30){
-		iv3a[IV3A_MH].foo = (selftest_counter++ - 20);
-	}else if(selftest_counter < 40){
-		iv3a[IV3A_ML].foo = (selftest_counter++ - 30);
-	}else if(selftest_counter < 50){
-		iv3a[IV3A_SH].foo = (selftest_counter++ - 40);
-	}else if(selftest_counter < 60){
-		iv3a[IV3A_SL].foo = (selftest_counter++ - 50);
-	}else if(selftest_counter == 60){
-		dispSetMode(DMODE_TIME);		
-		selftest_counter++;				
-	}
-#endif
+//#if(SELFTEST_ENABLE == 1)
+	//if(selftest_counter < 10){
+		//iv3a[IV3A_HH].foo = selftest_counter++;
+	//}else if(selftest_counter < 20){
+		//iv3a[IV3A_HL].foo = (selftest_counter++ - 10);
+	//}else if(selftest_counter < 30){
+		//iv3a[IV3A_MH].foo = (selftest_counter++ - 20);
+	//}else if(selftest_counter < 40){
+		//iv3a[IV3A_ML].foo = (selftest_counter++ - 30);
+	//}else if(selftest_counter < 50){
+		//iv3a[IV3A_SH].foo = (selftest_counter++ - 40);
+	//}else if(selftest_counter < 60){
+		//iv3a[IV3A_SL].foo = (selftest_counter++ - 50);
+	//}else if(selftest_counter == 60){
+		//dispSetMode(DMODE_TIME);		
+		//selftest_counter++;				
+	//}
+//#endif
 	
-	update_time(upload_flag, set_mode);	// процедура обновлеиня времени часов должна вызываться каджую секунду!
+	update_time(upload_flag, set_mode);	// time update method should be called every second!
 	dispUpdate();
 }
 
@@ -550,12 +560,12 @@ int main(void)
 	//	sys_timer.btn_block= millis();
 	//	sys_timer.buzzer = millis();
 
-#if(SELFTEST_ENABLE == 1)
-	for(uint8_t i = 0; i < 6; i++){					// initialize on-selftest mode
-		iv3a[i].mode = MODE_ON;
-		iv3a[i].foo = selftest_counter;
-	}
-#endif
+//#if(SELFTEST_ENABLE == 1)
+	//for(uint8_t i = 0; i < 6; i++){					// initialize on-selftest mode
+		//iv3a[i].mode = MODE_ON;
+		//iv3a[i].foo = selftest_counter;
+	//}
+//#endif
 	dispSetMode(DMODE_TIME, SMODE_NO);
 
 	// Main loop
