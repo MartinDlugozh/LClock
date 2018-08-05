@@ -46,10 +46,21 @@ static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31};
 //rtc_time_t now_time;
 //rtc_date_t now_date;
 
+#define BUZZ_INACTIVE 	0
+#define BUZZ_ACTIVE 	1
+
+#define ALARM_INACTIVE 	0
+#define ALARM_STANDBY	1
+#define ALARM_ACTIVE	2
+#define ALARM_BLOCK 	3
+
 rtc_time_t alarm_time;
 rtc_date_t alarm_date;		// dummy
 time_t alarm = 0;
 uint8_t alarm_is_on = 0;
+uint8_t alarm_buzzer = 0;
+uint8_t alarm_buzzer_cnt = 0;
+uint32_t buzzer_timer = 0;
 
 uint8_t upload_flag = 0;
 time_t rtc_update_timer = 0;
@@ -165,6 +176,36 @@ uint8_t update_alarm(void){
 		return 1;
 	}
 	return 0;
+}
+
+void buzzer_update()
+{
+	if((alarm_is_on == ALARM_ACTIVE) && (alarm_buzzer_cnt > 0))
+	{
+		if((millis() - buzzer_timer) > 75)
+		{
+			if(alarm_buzzer == BUZZ_INACTIVE)
+			{
+				alarm_buzzer = BUZZ_ACTIVE;
+			}else if(alarm_buzzer == BUZZ_ACTIVE)
+			{
+				alarm_buzzer = BUZZ_INACTIVE;
+			}
+			alarm_buzzer_cnt--;
+			buzzer_timer = millis();
+		}
+	}
+
+	if(((alarm_is_on == ALARM_INACTIVE) || (alarm_is_on == ALARM_BLOCK)) && (alarm_buzzer != 0))
+	{
+		alarm_buzzer = 0;
+	}
+
+	if(alarm_buzzer){
+		PORTB |= (1<<PB3);
+	}else{
+		PORTB &= ~(1<<PB3);
+	}
 }
 
 #endif /* TIMEKEEPER_H_ */

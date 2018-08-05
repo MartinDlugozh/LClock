@@ -19,7 +19,7 @@ static uint8_t read_byte(uint8_t pin)
 	uint8_t dat = 0;
 	for (uint8_t i = 0; i < 8; i++)
 	{
-		DDR_18B20 |= (1 << pin);
+		DDR_18B20 |= (1 << pin); 
 		_delay_us(2);
 		DDR_18B20 &= ~(1 << pin);
 		_delay_us(4);

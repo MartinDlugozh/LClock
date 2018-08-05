@@ -19,7 +19,6 @@
 #define PORT_18B20	PORTA
 #define PIN_18B20 PINA
 
-
 struct ds18b20{
 	uint8_t pin;
 	uint8_t scratch[9];

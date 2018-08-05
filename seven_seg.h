@@ -45,11 +45,11 @@ MACRO SECTION
 
 #define NA		0b11111001
 #define NB		0b10101011
-#define NC		0b10001010
+#define NC		0b01101010
 #define ND		0b10011011
 #define NE		0b11101010
 #define NF		0b11101000
-#define NH		0b10111001
+#define NH		0b10101001
 #define NL		0b00101010
 #define NN		0b10001001
 #define NO		0b10001011
@@ -223,7 +223,7 @@ uint8_t HC595GetDigitMask(uint8_t digit, bool point)
 	return _tmp;
 }
 
-uint8_t HC595GetCharMask(uint8_t ch, bool point)
+uint8_t HC595GetCharMask(char ch, bool point)
 {
 	uint8_t _tmp = 0;
 	switch(ch)

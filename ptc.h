@@ -16,8 +16,8 @@
 	#define F_CPU 16000000UL
 #endif
 
-#define TIM_DT 	(uint8_t)255	// OCR2 value for dead time: ((F_CPU / 120000UL) / 8)-1
-#define TIM_PU 	(uint8_t)3		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1
+#define TIM_DT 	(uint8_t)160	// OCR2 value for dead time: ((F_CPU / 120000UL) / 8)-1 (255)
+#define TIM_PU 	(uint8_t)16		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1 (6)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -32,7 +32,7 @@ void power_init(void){
 	// PD4 - MOSFET B
 	// PD5 - MOSFET A
 	PORTD = 0; // set pull-down for PORTD
-	DDRD = (1<<PD4)|(1<<PD5); // set PD4 and PD5 as outputs
+	DDRD |= ((1<<PD4)|(1<<PD5)); // set PD4 and PD5 as outputs
 
 	// Configure power transformer control timer (Timer2)
 	TCCR2 = 0; // reset timer
