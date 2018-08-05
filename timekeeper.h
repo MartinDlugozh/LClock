@@ -30,22 +30,6 @@
 
 static  const uint8_t monthDays[]={31,28,31,30,31,30,31,31,30,31,30,31};
 
-//struct now_time{
-	//uint8_t sec;
-	//uint8_t min;
-	//uint8_t hour;
-//}now_time;
-//
-//struct now_date{
-	//uint8_t wday;
-	//uint8_t day;
-	//uint8_t month;
-	//uint8_t year;
-//}now_date;
-
-//rtc_time_t now_time;
-//rtc_date_t now_date;
-
 #define BUZZ_INACTIVE 	0
 #define BUZZ_ACTIVE 	1
 
@@ -60,7 +44,7 @@ time_t alarm = 0;
 uint8_t alarm_is_on = 0;
 uint8_t alarm_buzzer = 0;
 uint8_t alarm_buzzer_cnt = 0;
-uint32_t buzzer_timer = 0;
+uint32_t buzzer_timer = 0;		// alarm buzzer update timer
 
 uint8_t upload_flag = 0;
 time_t rtc_update_timer = 0;
