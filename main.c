@@ -27,7 +27,9 @@
 #include "i2c.h"
 #include "rtc3231.h"
 #include "timekeeper.h"
-#include "ds18b20.h"
+//#include "ds18b20.h"
+#include "onewire.h"
+#include "ds18x20.h"
 
 // Main loop timers
 struct {
@@ -68,6 +70,60 @@ int8_t temp_b = 0;						// temperature from BMP180 (internal)
 uint16_t pressure = 0;					// barometric pressure from BMP180
 
 volatile uint8_t btn_block = 0;			// button debouncing flag
+
+void USART_init()
+{
+	// Set baud rate
+	UBRRH = 0;
+	UBRRL = 51;
+	UCSRA = 0;
+	// Enable receiver and transmitter
+	UCSRB = (1<<TXEN)|(1<<RXEN);
+	// Set frame format
+	UCSRC = (1<<UCSZ1) | (1<<UCSZ0) | (1<<URSEL);
+}
+
+void USART0_write(unsigned char data)
+{
+	while ( !( UCSRA & (1<<UDRE)) ) ;
+	UDR = data;
+}
+
+typedef enum _ds18b20_conv_state{
+	DSCS_UNINIT = 0,
+	DSCS_CONV,
+	DSCS_ENUM_END = 0xFF
+}ds18b20_conv_state_t;
+
+ds18b20_conv_state_t ds18b20_cs = DSCS_UNINIT;
+uint8_t ds18b20_rom[8];
+//uint32_t ds18b20_conv_timer = 0;
+
+void ds18b20_init(void){
+	USART_init();
+	OW_ReadROM(ds18b20_rom);
+}
+
+void ds18b20_conv(void){
+	switch(ds18b20_cs){
+		case DSCS_UNINIT:
+		{
+			DS18x20_StartMeasure(ds18b20_rom);
+			ds18b20_cs = DSCS_CONV;
+			break;
+		}
+		case DSCS_CONV:
+		{
+				uint8_t data[2];
+				DS18x20_ReadData(ds18b20_rom, data);
+				temp_a = DS18x20_ConvertToThemperatureFl(data);
+			ds18b20_cs = DSCS_UNINIT;
+			break;
+		}
+		default:
+			break;
+	}
+} 
 
 /**
  * Set indication mode
@@ -669,6 +725,7 @@ void loop_1Hz(void){
 			alarm_is_on = ALARM_STANDBY;
 		}
 	}
+	ds18b20_conv();
 }
 
 void buttons_init(void){
@@ -678,6 +735,24 @@ void buttons_init(void){
 void buzzer_init(void){
 	DDRB |= (1<<PB3);				// buzzer output on PB3
 	PORTB &= ~(1<<PB3);
+}
+
+/**
+ * Main loop tasks
+ */
+extern void run_tasks(void){
+	if(millis() >= sys_timer.loop_333Hz){
+		sys_timer.loop_333Hz = millis() + PERIOD_333HZ_MS;
+		loop_333Hz();
+	}
+	if(millis() >= sys_timer.loop_50Hz){
+		sys_timer.loop_50Hz = millis() + PERIOD_50HZ_MS;
+		loop_50Hz();
+	}
+	if(millis() >= sys_timer.loop_1Hz){
+		sys_timer.loop_1Hz = millis() + PERIOD_1HZ_MS;
+		loop_1Hz();
+	}
 }
 
 int main(void)
@@ -708,7 +783,7 @@ int main(void)
 
 	encoder_init();					// configure encoder ISR
 	// start BMP180 pressure and temperature sensor
-	ds18b20_init(&ds18b20, PA0);	// start DS18B20 temperature sensor
+	ds18b20_init();	// start DS18B20 temperature sensor
 
 	IV3aInit();			// start IV-3A luminescent display
 
@@ -721,17 +796,6 @@ int main(void)
 	// Main loop
     for(;;)
     {
-		if(millis() >= sys_timer.loop_333Hz){
-			sys_timer.loop_333Hz = millis() + PERIOD_333HZ_MS;
-			loop_333Hz();
-		}
-		if(millis() >= sys_timer.loop_50Hz){
-			sys_timer.loop_50Hz = millis() + PERIOD_50HZ_MS;
-			loop_50Hz();
-		}
-		if(millis() >= sys_timer.loop_1Hz){
-			sys_timer.loop_1Hz = millis() + PERIOD_1HZ_MS;
-			loop_1Hz();
-		}
+		run_tasks();
     }
 }
