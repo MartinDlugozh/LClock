@@ -155,8 +155,7 @@ void update_time(uint8_t upload_flag, uint8_t set_mode){
 
 uint8_t update_alarm(void){
 	if((alarm_time.hour == rtc_time.hour) &&
-		(alarm_time.min == rtc_time.min) &&
-		(alarm_time.sec == rtc_time.sec)){
+		(alarm_time.min == rtc_time.min)){
 		return 1;
 	}
 	return 0;

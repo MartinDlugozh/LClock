@@ -6,20 +6,29 @@
 #define ibi(reg,bit) reg ^= (1<<bit)
 #define CheckBit(reg,bit) (reg&(1<<bit))
 
+void OW_IdleTask(void){
+	loop_333Hz();
+}
+
 uint8_t OW_Reset(void)
 {
 	UCSRB=(1<<RXEN)|(1<<TXEN);
 	//9600
 	UBRRL = USART_BAUDRATE_9600;
 	UBRRH = (USART_BAUDRATE_9600 >> 8);
-	//UCSRA &= ~(1<<U2X);
+	UCSRA &= ~(1<<U2X);
 	
-	while(CheckBit(UCSRA, RXC)) UDR; //Зачистка буферов
+	while(CheckBit(UCSRA, RXC)){		 // clean buffers
+		UDR;
+		OW_IdleTask();
+	}
 	cli();
 	UDR = 0xF0;
 	UCSRA = (1<<TXC);
 	sei();
-	while(!CheckBit(UCSRA, RXC)) /*run_tasks()*/;
+	while(!CheckBit(UCSRA, RXC)){
+		OW_IdleTask();
+	}
 	if (UDR != 0xF0) return 1;
 	return 0;
 }
@@ -28,17 +37,25 @@ void OW_WriteBit(uint8_t bit)
 {
 	UBRRL = USART_BAUDRATE_115200;	//115200
 	UBRRH = (USART_BAUDRATE_115200 >> 8);
-	//UCSRA |= (1<<U2X);	
+	UCSRA |= (1<<U2X);	
 	
 	uint8_t d = 0x00;	
-	while(CheckBit(UCSRA, RXC)) UDR; // clean buffers
+	while(CheckBit(UCSRA, RXC)){		 // clean buffers
+		UDR;
+		OW_IdleTask();
+	}
 	if (bit) d = 0xFF;
 	cli();
 	UDR = d;
 	UCSRA=(1<<TXC);
 	sei();
-	while(!CheckBit(UCSRA,TXC));
-	while(CheckBit(UCSRA, RXC)) UDR; // clean buffers	
+	while(!CheckBit(UCSRA,TXC)){		 // clean buffers
+		OW_IdleTask();
+	}
+	while(CheckBit(UCSRA, RXC)){
+		UDR;
+		OW_IdleTask();
+	}
 }
 
 uint8_t OW_ReadBit(void)
@@ -46,16 +63,23 @@ uint8_t OW_ReadBit(void)
 	//115200
 	UBRRL = USART_BAUDRATE_115200;
 	UBRRH = (USART_BAUDRATE_115200 >> 8);
-	//UCSRA |= (1<<U2X);
+	UCSRA |= (1<<U2X);
 	
 	uint8_t c;
-	while(CheckBit(UCSRA, RXC)) UDR; // clean buffers
+	while(CheckBit(UCSRA, RXC)){		 // clean buffers
+		UDR;
+		OW_IdleTask();
+	}
 	cli();		
 	UDR = 0xFF;
 	UCSRA=(1<<TXC);
 	sei();
-	while(!CheckBit(UCSRA, TXC));
-	while(!CheckBit(UCSRA, RXC));
+	while(!CheckBit(UCSRA, TXC)){
+		OW_IdleTask();
+	}
+	while(!CheckBit(UCSRA, RXC)){
+		OW_IdleTask();
+	}
 	c = UDR;
 	if (c>0xFE) return 1;
 	return 0;
@@ -66,7 +90,7 @@ uint8_t OW_WriteByte(uint8_t byte)
 	uint8_t i = 8;
 	UBRRL = USART_BAUDRATE_115200;			//115200
 	UBRRH = (USART_BAUDRATE_115200 >> 8);
-	//UCSRA |= (1<<U2X);
+	UCSRA |= (1<<U2X);
 	do
 	{
 		uint8_t d = 0x00;
@@ -75,11 +99,12 @@ uint8_t OW_WriteByte(uint8_t byte)
 		UDR = d;
 		UCSRA=(1<<TXC);
 		sei();
-		while(!CheckBit(UCSRA,RXC)) /*run_tasks()*/;
+		while(!CheckBit(UCSRA,RXC)){
+			OW_IdleTask();
+		}
 		byte>>=1;
 		if (UDR>0xFE) byte|=128;
-	}
-	while(--i);
+	}while(--i);
 	return byte&255;
 }
 
@@ -126,11 +151,9 @@ uint8_t OW_SearchROM(uint8_t diff, uint8_t *id )
          *id >>= 1;
          if( b ) *id |= 0x80;			// store bit
          i--;
-		} 
-		while( --j );
+		}while( --j );
 		id++;                           // next byte
-    } 
-	while( i );
+    }while( i );
 	return next_diff;					// to continue search
 }
 

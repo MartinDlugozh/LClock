@@ -40,6 +40,7 @@
 #define OW_ROMCODE_SIZE	8
 
 extern void run_tasks(void);
+extern void loop_333Hz(void);
 
 uint8_t OW_Reset(void);
 void OW_WriteBit(uint8_t bit);

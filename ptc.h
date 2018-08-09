@@ -17,7 +17,7 @@
 #endif
 
 #define TIM_DT 	(uint8_t)160	// OCR2 value for dead time: ((F_CPU / 120000UL) / 8)-1 (255)
-#define TIM_PU 	(uint8_t)12 //16		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1 (6)
+#define TIM_PU 	(uint8_t)4 //16		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1 (6)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
