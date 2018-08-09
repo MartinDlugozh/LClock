@@ -72,7 +72,7 @@ int8_t temp_a = 0;						// temperature from DS18B20 (external)
 int8_t temp_b = 0;						// temperature from BMP180 (internal)
 uint16_t pressure = 0;					// barometric pressure from BMP180
 
-volatile uint8_t btn_block = 0;			// button debouncing flag
+volatile uint8_t btn_block;			// button debouncing flag
 uint8_t btn_set_prev_state = 0;
 uint8_t btn_ok_prev_state = 0;
 
@@ -359,7 +359,7 @@ void dispReload(dispMode_t dmode, setMode_t smode){
 			break;
 		}
 		default:
-		break;
+			break;
 	}
 }
 
@@ -421,7 +421,7 @@ void encoder_on_inc(void){
 					break;
 				}
 				default:
-				break;
+					break;
 			}
 			break;
 		}
@@ -447,12 +447,12 @@ void encoder_on_inc(void){
 					break;
 				}
 				default:
-				break;
+					break;
 			}
 			break;
 		}
 		default:
-		break;
+			break;
 	}
 
 	dispReload(disp_mode, set_mode);
@@ -492,7 +492,7 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
-				break;
+					break;
 			}
 			break;
 		}
@@ -518,7 +518,7 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
-				break;
+					break;
 			}
 			break;
 		}
@@ -544,7 +544,7 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
-				break;
+					break;
 			}
 			break;
 		}
@@ -617,8 +617,9 @@ void loop_100Hz(void){
 					// upload_flag = 1;
 					dispReload(disp_mode, set_mode);
 				}
-				BLOCK_BTN();
-				return;
+				//BLOCK_BTN();
+				btn_block = 1;
+				sys_timer.btn_block = millis() + 200;
 			}
 			btn_set_prev_state = _btn_set;
 			
@@ -632,11 +633,12 @@ void loop_100Hz(void){
 					set_mode = SMODE_NO;
 					dispReload(disp_mode, set_mode);
 				}
-				BLOCK_BTN();
-				return;
+				//BLOCK_BTN();
+				btn_block = 1;
+				sys_timer.btn_block = millis() + 200;
 			}
 			btn_ok_prev_state = _btn_ok;
-		}else if((millis() - sys_timer.btn_block) >= 400)
+		}else if(millis() >= sys_timer.btn_block)
 		{
 			btn_block = 0;
 		}
@@ -675,7 +677,7 @@ void loop_1Hz(void){
 		{
 			alarm_is_on = ALARM_ACTIVE;
 			alarm_buzzer_cnt = 12;
-			buzzer_update();
+			buzzer_update(btn_block);
 		}else if((update_alarm() == 0) && (alarm_is_on == ALARM_BLOCK))
 		{
 			alarm_is_on = ALARM_STANDBY;
@@ -700,19 +702,19 @@ extern void run_tasks(void){
 	loop_100Hz();
 	loop_2Hz();
 	loop_1Hz();
-	buzzer_update();
+	buzzer_update(btn_block);
 }
 
 int main(void)
 {
-	_delay_ms(500);		// pre-start delay (for BMP180 hardware initialization)
+	//_delay_ms(500);		// pre-start delay (for BMP180 hardware initialization)
 	power_init();		// start complementary pwm on timer2
 	millis_init();		// start system millis() on timer0
 	i2c_init();			// start TWI
 	rtc3231_init();		// start DS3231 RTC
 	buttons_init();		// initialize buttons pins
 	buzzer_init();		// initialize buzzer pin
-	_delay_ms(500);
+	//_delay_ms(500);
 
 //	rtc_date.year = 48;		// uncomment and set actual time and date
 //	rtc_date.month = 7;

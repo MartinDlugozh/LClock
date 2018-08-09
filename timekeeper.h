@@ -161,7 +161,7 @@ uint8_t update_alarm(void){
 	return 0;
 }
 
-void buzzer_update()
+void buzzer_update(uint8_t btn_block_flag)
 {
 	if((alarm_is_on == ALARM_ACTIVE) && (alarm_buzzer_cnt > 0))
 	{
@@ -184,7 +184,7 @@ void buzzer_update()
 		alarm_buzzer = 0;
 	}
 
-	if(alarm_buzzer){
+	if((alarm_buzzer == 1) || (btn_block_flag == 1)){
 		PORTB |= (1<<PB3);
 	}else{
 		PORTB &= ~(1<<PB3);
