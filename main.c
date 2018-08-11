@@ -43,7 +43,7 @@ struct {
 }sys_timer;
 
 volatile typedef enum _dispMode{		// indication modes ("main menu")
-	DMODE_TIME = 0,						// 0..5 - main modes
+	DMODE_TIME = 0,						// 0..5(3) - main modes
 	DMODE_DATE = 1,
 	DMODE_ALARM = 2,
 	DMODE_TEMPERATURE_A = 3,
@@ -60,8 +60,6 @@ volatile typedef enum _setMode{			// adjustment modes
 	SMODE_SS = 1,						// adjust second/year
 	SMODE_MM = 2,						// adjust minute/month
 	SMODE_HH = 3,						// adjust hour/day
-	SMODE_TEMP,							// adjust temperature (A or B)
-	SMODE_PRESS,						// adjust pressure
 	SMODE_ENUM_END = 0xFF
 } setMode_t;
 
@@ -69,8 +67,8 @@ volatile dispMode_t disp_mode = 0;			// time/date/alarm/temperature/pressure
 volatile setMode_t set_mode = 0;			// adjustment mode
 
 int8_t temp_a = 0;						// temperature from DS18B20 (external)
-int8_t temp_b = 0;						// temperature from BMP180 (internal)
-uint16_t pressure = 0;					// barometric pressure from BMP180
+//int8_t temp_b = 0;						// temperature from BMP180 (internal)
+//uint16_t pressure = 0;					// barometric pressure from BMP180
 
 volatile uint8_t btn_block;			// button debouncing flag
 uint8_t btn_set_prev_state = 0;
@@ -137,9 +135,9 @@ void dispReload(dispMode_t dmode, setMode_t smode){
 	if((dmode == DMODE_TIME) ||
 	(dmode == DMODE_DATE)){
 		_dmode = DMODE_CTIME;
-		}else if((dmode == DMODE_TEMPERATURE_A) || (dmode == DMODE_TEMPERATURE_B)){
+	}else if((dmode == DMODE_TEMPERATURE_A) || (dmode == DMODE_TEMPERATURE_B)){
 		_dmode = DMODE_CTEMPERATURE;
-		}else{
+	}else{
 		_dmode = dmode;
 	}
 
@@ -153,16 +151,21 @@ void dispReload(dispMode_t dmode, setMode_t smode){
 					iv3a[IV3A_MH].mode = MODE_ON;
 					iv3a[IV3A_SH].mode = MODE_ON;
 					iv3a[IV3A_SL].mode = MODE_ON;
-					if(millis() >= point_blink_timer){
-						point_blink_timer = millis() + BLINK_HALFPERIOD_MS;
-						if(point_blink_flag == 1){
-							iv3a[IV3A_HL].mode = MODE_ON_POINT;
-							iv3a[IV3A_ML].mode = MODE_ON_POINT;
-							}else{
-							iv3a[IV3A_HL].mode = MODE_ON;
-							iv3a[IV3A_ML].mode = MODE_ON;
+					if(disp_mode == DMODE_TIME){
+						if(millis() >= point_blink_timer){
+							point_blink_timer = millis() + BLINK_HALFPERIOD_MS;
+							if(point_blink_flag == 1){
+								iv3a[IV3A_HL].mode = MODE_ON_POINT;
+								iv3a[IV3A_ML].mode = MODE_ON_POINT;
+								}else{
+								iv3a[IV3A_HL].mode = MODE_ON;
+								iv3a[IV3A_ML].mode = MODE_ON;
+							}
+							point_blink_flag = !point_blink_flag;
 						}
-						point_blink_flag = !point_blink_flag;
+					}else if(disp_mode == DMODE_DATE){
+						iv3a[IV3A_HL].mode = MODE_ON_POINT;
+						iv3a[IV3A_ML].mode = MODE_ON_POINT;
 					}
 					break;
 				}
@@ -337,30 +340,47 @@ void dispReload(dispMode_t dmode, setMode_t smode){
 				iv3a[IV3A_HH].foo = 0xFF;
 				breakSNumber2(temp_a, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
 				iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
-			}else if(disp_mode == DMODE_TEMPERATURE_B){
-				iv3a[IV3A_HH].foo = 0xFF;
-				breakSNumber2(temp_b, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
-				iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
-				break;
 			}
+			//else if(disp_mode == DMODE_TEMPERATURE_B){
+				//iv3a[IV3A_HH].foo = 0xFF;
+				//breakSNumber2(temp_b, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
+				//iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
+				//break;
+			//}
 			break;
 		}
-		case DMODE_PRESSURE:
-		{
-			iv3a[IV3A_HH].mode = MODE_ON;
-			iv3a[IV3A_MH].mode = MODE_ON;
-			iv3a[IV3A_SH].mode = MODE_CHAR;
-			iv3a[IV3A_HL].mode = MODE_ON;
-			iv3a[IV3A_ML].mode = MODE_ON;
-			iv3a[IV3A_SL].mode = MODE_CHAR;
-
-			breakNumber4(pressure, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo), &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
-			iv3a[IV3A_SH].foo = 'h'; iv3a[IV3A_SL].foo = 'p';
-			break;
-		}
+		//case DMODE_PRESSURE:
+		//{
+			//iv3a[IV3A_HH].mode = MODE_ON;
+			//iv3a[IV3A_MH].mode = MODE_ON;
+			//iv3a[IV3A_SH].mode = MODE_CHAR;
+			//iv3a[IV3A_HL].mode = MODE_ON;
+			//iv3a[IV3A_ML].mode = MODE_ON;
+			//iv3a[IV3A_SL].mode = MODE_CHAR;
+//
+			//breakNumber4(pressure, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo), &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			//iv3a[IV3A_SH].foo = 'h'; iv3a[IV3A_SL].foo = 'p';
+			//break;
+		//}
 		default:
 			break;
 	}
+}
+
+void dmode_inc(void){
+	if(++disp_mode >= 4){
+		disp_mode = 0;
+	}
+	dispReload(disp_mode, set_mode);
+}
+
+void dmode_dec(void){
+	if(disp_mode > 0){
+		disp_mode--;
+		}else{
+		disp_mode = 3;
+	}
+	dispReload(disp_mode, set_mode);
 }
 
 // encoder32 routine
@@ -368,10 +388,7 @@ void encoder_on_inc(void){
 	switch(set_mode){
 		case SMODE_NO:				// normal indication
 		{
-			if(++disp_mode >= 6){
-				disp_mode = 0;
-			}
-			dispReload(disp_mode, set_mode);
+			dmode_inc();
 			break;
 		}
 		case SMODE_SS:
@@ -395,7 +412,10 @@ void encoder_on_inc(void){
 					break;
 				}
 				default:
+				{
+					dmode_inc();
 					break;
+				}
 			}
 			break;
 		}
@@ -421,7 +441,10 @@ void encoder_on_inc(void){
 					break;
 				}
 				default:
+				{
+					dmode_inc();
 					break;
+				}
 			}
 			break;
 		}
@@ -447,7 +470,10 @@ void encoder_on_inc(void){
 					break;
 				}
 				default:
+				{
+					dmode_inc();
 					break;
+				}
 			}
 			break;
 		}
@@ -463,12 +489,7 @@ void encoder_on_dec(void){
 	switch(set_mode){
 		case SMODE_NO:				// normal indication
 		{
-			if(disp_mode > 0){
-				disp_mode--;
-			}else{
-				disp_mode = 5;
-			}
-			dispReload(disp_mode, set_mode);
+			dmode_dec();
 			break;
 		}
 		case SMODE_SS:
@@ -492,7 +513,10 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
+				{
+					dmode_dec();
 					break;
+				}
 			}
 			break;
 		}
@@ -518,7 +542,10 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
+				{
+					dmode_dec();
 					break;
+				}
 			}
 			break;
 		}
@@ -544,7 +571,10 @@ void encoder_on_dec(void){
 					break;
 				}
 				default:
+				{
+					dmode_dec();
 					break;
+				}
 			}
 			break;
 		}
@@ -614,7 +644,7 @@ void loop_100Hz(void){
 					}
 					set_mode = _smode;
 					// save time to RTC
-					// upload_flag = 1;
+					
 					dispReload(disp_mode, set_mode);
 				}
 				//BLOCK_BTN();
@@ -629,6 +659,7 @@ void loop_100Hz(void){
 				{
 					alarm_is_on = ALARM_BLOCK;
 				}else{
+					upload_to_rtc();
 					disp_mode = DMODE_TIME;
 					set_mode = SMODE_NO;
 					dispReload(disp_mode, set_mode);
@@ -665,22 +696,21 @@ void loop_1Hz(void){
 	if(millis() >= sys_timer.loop_1Hz){
 		sys_timer.loop_1Hz = millis() + PERIOD_1HZ_MS;
 		
-		update_time(upload_flag, set_mode);	// time update method should be called every second!
+		update_time(set_mode);	// time update method should be called every second!
 		dispReload(disp_mode, set_mode);
 
 		// alarm check and tone genertion
-		//if((alarm_is_on == ALARM_STANDBY) || (alarm_is_on == ALARM_INACTIVE) || (alarm_is_on == ALARM_BLOCK))
-		//{
-			//
-		//}
-		if((update_alarm() == 1) && (alarm_is_on != ALARM_BLOCK))
+		if((alarm_is_on == ALARM_STANDBY) || (alarm_is_on == ALARM_ACTIVE) || (alarm_is_on == ALARM_BLOCK))
 		{
-			alarm_is_on = ALARM_ACTIVE;
-			alarm_buzzer_cnt = 12;
-			buzzer_update(btn_block);
-		}else if((update_alarm() == 0) && (alarm_is_on == ALARM_BLOCK))
-		{
-			alarm_is_on = ALARM_STANDBY;
+			if((update_alarm() == 1) && (alarm_is_on != ALARM_BLOCK))
+			{
+				alarm_is_on = ALARM_ACTIVE;
+				alarm_buzzer_cnt = 12;
+				buzzer_update(btn_block);
+			}else if((update_alarm() == 0) && (alarm_is_on == ALARM_BLOCK))
+			{
+				alarm_is_on = ALARM_STANDBY;
+			}
 		}
 	}
 }

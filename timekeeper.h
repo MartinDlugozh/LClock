@@ -46,7 +46,6 @@ uint8_t alarm_buzzer = 0;
 uint8_t alarm_buzzer_cnt = 0;
 uint32_t buzzer_timer = 0;		// alarm buzzer update timer
 
-uint8_t upload_flag = 0;
 time_t rtc_update_timer = 0;
 time_t now = 0;				// UTC (seconds since 1970)
 
@@ -133,17 +132,18 @@ void nowBreakTime(time_t inputTime, rtc_time_t *ntime, rtc_date_t *ndate){
 	ndate->day = time + 1;     // day of month
 }
 
+void upload_to_rtc(void){
+	rtc_update_timer = now;
+	nowBreakTime(now, &rtc_time, &rtc_date);
+	rtc3231_write_date(&rtc_date);
+	rtc3231_write_time(&rtc_time);
+}
+
 // 1Hz update!!!
-void update_time(uint8_t upload_flag, uint8_t set_mode){
+void update_time(uint8_t set_mode){
 	now++;
 
-	if(upload_flag == 1){
-		rtc_update_timer = now;
-		nowBreakTime(now, &rtc_time, &rtc_date);
-		rtc3231_write_date(&rtc_date);
-		rtc3231_write_time(&rtc_time);
-		upload_flag = 0;
-	}else if(((now-rtc_update_timer) >= RTC_TIME_UPDATE_PERIOD_S) && (set_mode == 0))
+	if(((now-rtc_update_timer) >= RTC_TIME_UPDATE_PERIOD_S) && (set_mode == 0))
 	{
 		rtc3231_read_datetime(&rtc_time, &rtc_date);
 		now = rtcMakeTime(&rtc_time, &rtc_date);

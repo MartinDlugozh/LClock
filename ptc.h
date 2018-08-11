@@ -16,8 +16,8 @@
 	#define F_CPU 16000000UL
 #endif
 
-#define TIM_DT 	(uint8_t)160	// OCR2 value for dead time: ((F_CPU / 120000UL) / 8)-1 (255)
-#define TIM_PU 	(uint8_t)4 //16		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1 (6)
+#define TIM_DT 	(uint8_t)200	// 160	// OCR2 value for dead time: ((F_CPU / 120000UL) / 8)-1 (255)
+#define TIM_PU 	(uint8_t)12 //4		// OCR2 value for pulse: ((F_CPU / 500000UL) / 8)-1 (6)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -25,7 +25,6 @@
 
 volatile bool ab_flag = false;			// push-pull on-sequence flag
 volatile uint8_t pls_counter = 0;		// push-pull ISR breaking counter (DT only)
-
 
 void power_init(void){
 	cli();
@@ -55,7 +54,7 @@ ISR(TIMER2_COMP_vect){
 	if(OCR2 == TIM_DT){
 		PORTD &= ~(1<<PD4);
 		PORTD &= ~(1<<PD5);
-		if(pls_counter >= 2){
+		if(pls_counter >= 3){
 			OCR2 = TIM_PU;
 			pls_counter = 0;
 		}
