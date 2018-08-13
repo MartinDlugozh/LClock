@@ -60,6 +60,8 @@ MACRO SECTION
 #define NU		0b00111011
 #define NY		0b10110011
 #define NDASH	0b10000000
+#define NHDASH	0b00100000
+#define NLDASH	0b00001000
 
 #define HC595_PORT   	PORTB
 #define HC595_DDR    	DDRB
@@ -311,6 +313,16 @@ uint8_t HC595GetCharMask(char ch, bool point)
 	case '-':
 	{
 		_tmp = NDASH;
+		break;
+	}
+	case 'I':
+	{
+		_tmp = NLDASH;
+		break;
+	}
+	case 'O':
+	{
+		_tmp = NHDASH;
 		break;
 	}
 	default:

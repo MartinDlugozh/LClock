@@ -7,7 +7,7 @@
 
 #define F_CPU 16000000UL
 
-#define PERIOD_333HZ_MS		2
+#define PERIOD_333HZ_MS		3
 #define PERIOD_100HZ_MS		10
 #define PERIOD_2HZ_MS		500
 #define PERIOD_1HZ_MS 		1000
@@ -15,6 +15,7 @@
 #define BLOCK_BTN() { btn_block = 1; sys_timer.btn_block = millis(); }
 
 #define DS18B20_CALIBRATION_OFFSET (int)(0)
+#define BMP180_CALIBRATION_OFFSET (int)(-2)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -32,6 +33,7 @@
 #include "timekeeper.h"
 #include "onewire.h"
 #include "ds18x20.h"
+#include "bmp085.h"
 
 // Main loop timers
 struct {
@@ -67,8 +69,8 @@ volatile dispMode_t disp_mode = 0;			// time/date/alarm/temperature/pressure
 volatile setMode_t set_mode = 0;			// adjustment mode
 
 int8_t temp_a = 0;						// temperature from DS18B20 (external)
-//int8_t temp_b = 0;						// temperature from BMP180 (internal)
-//uint16_t pressure = 0;					// barometric pressure from BMP180
+int8_t temp_b = 0;						// temperature from BMP180 (internal)
+uint16_t pressure = 0;					// barometric pressure from BMP180
 
 volatile uint8_t btn_block;			// button debouncing flag
 uint8_t btn_set_prev_state = 0;
@@ -337,38 +339,37 @@ void dispReload(dispMode_t dmode, setMode_t smode){
 			iv3a[IV3A_SL].mode = MODE_CHAR;
 
 			if(disp_mode == DMODE_TEMPERATURE_A){
-				iv3a[IV3A_HH].foo = 0xFF;
+				iv3a[IV3A_HH].foo = 'O';
 				breakSNumber2(temp_a, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
 				iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
 			}
-			//else if(disp_mode == DMODE_TEMPERATURE_B){
-				//iv3a[IV3A_HH].foo = 0xFF;
-				//breakSNumber2(temp_b, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
-				//iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
-				//break;
-			//}
+			else if(disp_mode == DMODE_TEMPERATURE_B){
+				iv3a[IV3A_HH].foo = 'I';
+				breakSNumber2(temp_b, &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo), &(iv3a[IV3A_HL].foo));
+				iv3a[IV3A_SH].foo = 'd'; iv3a[IV3A_SL].foo = 'c';
+				break;
+			}
 			break;
 		}
-		//case DMODE_PRESSURE:
-		//{
-			//iv3a[IV3A_HH].mode = MODE_ON;
-			//iv3a[IV3A_MH].mode = MODE_ON;
-			//iv3a[IV3A_SH].mode = MODE_CHAR;
-			//iv3a[IV3A_HL].mode = MODE_ON;
-			//iv3a[IV3A_ML].mode = MODE_ON;
-			//iv3a[IV3A_SL].mode = MODE_CHAR;
-//
-			//breakNumber4(pressure, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo), &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
-			//iv3a[IV3A_SH].foo = 'h'; iv3a[IV3A_SL].foo = 'p';
-			//break;
-		//}
+		case DMODE_PRESSURE:
+		{
+			iv3a[IV3A_HH].mode = MODE_ON;
+			iv3a[IV3A_MH].mode = MODE_ON;
+			iv3a[IV3A_SH].mode = MODE_CHAR;
+			iv3a[IV3A_HL].mode = MODE_ON;
+			iv3a[IV3A_ML].mode = MODE_ON;
+			iv3a[IV3A_SL].mode = MODE_CHAR;
+			breakNumber4(pressure, &(iv3a[IV3A_HH].foo), &(iv3a[IV3A_HL].foo), &(iv3a[IV3A_MH].foo), &(iv3a[IV3A_ML].foo));
+			iv3a[IV3A_SH].foo = 'h'; iv3a[IV3A_SL].foo = 'p';
+			break;
+		}
 		default:
 			break;
 	}
 }
 
 void dmode_inc(void){
-	if(++disp_mode >= 4){
+	if(++disp_mode >= 6){
 		disp_mode = 0;
 	}
 	dispReload(disp_mode, set_mode);
@@ -378,7 +379,7 @@ void dmode_dec(void){
 	if(disp_mode > 0){
 		disp_mode--;
 		}else{
-		disp_mode = 3;
+		disp_mode = 5;
 	}
 	dispReload(disp_mode, set_mode);
 }
@@ -389,6 +390,12 @@ void encoder_on_inc(void){
 		case SMODE_NO:				// normal indication
 		{
 			dmode_inc();
+			if(disp_mode == DMODE_TEMPERATURE_B){
+				temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
+			}
+			if(disp_mode == DMODE_PRESSURE){
+				pressure = bmp085_getpressure()/100;
+			}
 			break;
 		}
 		case SMODE_SS:
@@ -490,6 +497,12 @@ void encoder_on_dec(void){
 		case SMODE_NO:				// normal indication
 		{
 			dmode_dec();
+			if(disp_mode == DMODE_TEMPERATURE_B){
+				temp_b = bmp085_gettemperature();
+			}
+			if(disp_mode == DMODE_PRESSURE){
+				pressure = bmp085_getpressure()/100;
+			}
 			break;
 		}
 		case SMODE_SS:
@@ -647,9 +660,7 @@ void loop_100Hz(void){
 					
 					dispReload(disp_mode, set_mode);
 				}
-				//BLOCK_BTN();
-				btn_block = 1;
-				sys_timer.btn_block = millis() + 200;
+				BLOCK_BTN();
 			}
 			btn_set_prev_state = _btn_set;
 			
@@ -664,9 +675,7 @@ void loop_100Hz(void){
 					set_mode = SMODE_NO;
 					dispReload(disp_mode, set_mode);
 				}
-				//BLOCK_BTN();
-				btn_block = 1;
-				sys_timer.btn_block = millis() + 200;
+				BLOCK_BTN();
 			}
 			btn_ok_prev_state = _btn_ok;
 		}else if(millis() >= sys_timer.btn_block)
@@ -682,6 +691,12 @@ void loop_2Hz(void){
 
 		if(disp_mode == DMODE_TEMPERATURE_A){
 			ds18b20_conv();
+		}
+		if(disp_mode == DMODE_TEMPERATURE_B){
+			temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
+		}
+		if(disp_mode == DMODE_PRESSURE){
+			pressure = bmp085_getpressure()/100;
 		}
 		dispReload(disp_mode, set_mode);
 	}
@@ -737,14 +752,14 @@ extern void run_tasks(void){
 
 int main(void)
 {
-	//_delay_ms(500);		// pre-start delay (for BMP180 hardware initialization)
+	_delay_ms(500);		// pre-start delay (for BMP180 hardware initialization)
 	power_init();		// start complementary pwm on timer2
 	millis_init();		// start system millis() on timer0
 	i2c_init();			// start TWI
 	rtc3231_init();		// start DS3231 RTC
 	buttons_init();		// initialize buttons pins
 	buzzer_init();		// initialize buzzer pin
-	//_delay_ms(500);
+	_delay_ms(500);
 
 //	rtc_date.year = 48;		// uncomment and set actual time and date
 //	rtc_date.month = 7;
@@ -761,9 +776,8 @@ int main(void)
 	rtc_update_timer = now;								// reset RTC update timer
 	alarm = now;										// reset alarm time
 
-	encoder_init();					// configure encoder ISR
-	// start BMP180 pressure and temperature sensor
-	ds18b20_init();	// start DS18B20 temperature sensor
+	encoder_init();		// configure encoder ISR
+	ds18b20_init();		// start DS18B20 temperature sensor
 
 	IV3aInit();			// start IV-3A luminescent display
 
@@ -776,6 +790,7 @@ int main(void)
 	set_mode = SMODE_NO;
 	dispReload(disp_mode, set_mode);
 
+	bmp085_init();		// start BMP180 pressure and temperature sensor
 	// Main loop
     for(;;)
     {

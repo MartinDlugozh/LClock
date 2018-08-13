@@ -45,8 +45,9 @@ static unsigned char bin(unsigned char dec)
 
 void rtc3231_init(void)
 {
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
+	//i2c_start();
+	//i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
 	i2c_send_byte(0x0E);
 	i2c_send_byte(0x20);
 	i2c_send_byte(0x08);
@@ -55,63 +56,56 @@ void rtc3231_init(void)
 
 void rtc3231_read_time(rtc_time_t *time)
 {
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
 	i2c_send_byte(0x00);
 	i2c_stop_condition();
 
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	time->sec = bcd(i2c_recv_byte());
-	time->min = bcd(i2c_recv_byte());
-	time->hour = bcd(i2c_recv_byte());
+	i2c_start_addr(RTC_RADDR);
+	time->sec = bcd(i2c_readAck());
+	time->min = bcd(i2c_readAck());
+	time->hour = bcd(i2c_readAck());		// ACK???
 	i2c_stop_condition();
 }
 
 void rtc3231_read_date(rtc_date_t *date)
 {
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
 	i2c_send_byte(0x00);
 	i2c_stop_condition();
 
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	bcd(i2c_recv_byte());
-	bcd(i2c_recv_byte());
-	bcd(i2c_recv_byte());
+	i2c_start_addr(RTC_RADDR);
+	bcd(i2c_readAck());
+	bcd(i2c_readAck());
+	bcd(i2c_readAck());
 
-	date->wday = bcd(i2c_recv_byte());
-	date->day = bcd(i2c_recv_byte());
-	date->month = bcd(i2c_recv_byte());
-	date->year = bcd(i2c_recv_last_byte());
+	date->wday = bcd(i2c_readAck());
+	date->day = bcd(i2c_readAck());
+	date->month = bcd(i2c_readAck());
+	date->year = bcd(i2c_readNak());
 	i2c_stop_condition();
 }
 
 void rtc3231_read_datetime(rtc_time_t *time, rtc_date_t *date)
 {
-	i2c_start_condition();
-	i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
 	i2c_send_byte(0x00);
 	i2c_stop_condition();
 
-	i2c_start_condition();
-	i2c_send_byte(RTC_RADDR);
-	time->sec = bcd(i2c_recv_byte());
-	time->min = bcd(i2c_recv_byte());
-	time->hour = bcd(i2c_recv_byte());
+	i2c_start_addr(RTC_RADDR);
+	time->sec = bcd(i2c_readAck());
+	time->min = bcd(i2c_readAck());
+	time->hour = bcd(i2c_readAck());
 
-	date->wday = bcd(i2c_recv_byte());
-	date->day = bcd(i2c_recv_byte());
-	date->month = bcd(i2c_recv_byte());
-	date->year = bcd(i2c_recv_last_byte());
+	date->wday = bcd(i2c_readAck());
+	date->day = bcd(i2c_readAck());
+	date->month = bcd(i2c_readAck());
+	date->year = bcd(i2c_readNak());
 	i2c_stop_condition();
 }
 
 void rtc3231_write_time(rtc_time_t *time)
 {
-    i2c_start_condition();
-    i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
     i2c_send_byte(0x00);
     i2c_send_byte(bin(time->sec));
 	i2c_send_byte(bin(time->min));
@@ -121,8 +115,7 @@ void rtc3231_write_time(rtc_time_t *time)
 
 void rtc3231_write_date(rtc_date_t *date)
 {
-	i2c_start_condition();
-    i2c_send_byte(RTC_WADDR);
+	i2c_start_addr(RTC_WADDR);
     i2c_send_byte(0x03);
     i2c_send_byte(bin(date->wday));
     i2c_send_byte(bin(date->day));

@@ -13,7 +13,21 @@
 #define __I2C_H__
 
 #include <avr/io.h>
+#include <twi.h>
 
+/** defines the data direction (reading from I2C device) in i2c_start(),i2c_rep_start() */
+#define I2C_READ    1
+
+/** defines the data direction (writing to I2C device) in i2c_start(),i2c_rep_start() */
+#define I2C_WRITE   0
+
+#ifndef F_CPU
+	#define F_CPU 16000000UL
+#endif
+
+/* I2C clock in Hz */
+#define SCL_CLOCK  10000L
+#define TWI_SPEED (uint8_t)(((F_CPU/SCL_CLOCK)-16)/2)
 
 /*
  * Init lib
@@ -23,17 +37,22 @@ void i2c_init(void);
 /*
  * Start sending data
  */
-void i2c_start_condition(void);
+void i2c_start(void);
+uint8_t i2c_start_addr(unsigned char address);
+void i2c_start_wait(unsigned char address);
+uint8_t i2c_rep_start(unsigned char address);
 
 /*
  * Stop sending data
  */
+ void i2c_stop(void);
 void i2c_stop_condition(void);
 
 /**
  * Send byte to device
  * @byte: sending byte
  */
+ uint8_t i2c_write( unsigned char data );
 void i2c_send_byte(unsigned char byte);
 
 /**
@@ -48,14 +67,14 @@ void i2c_send_packet(unsigned char value, unsigned char address);
  *
  * returns: byte
  */
-unsigned char i2c_recv_byte(void);
+uint8_t i2c_readAck(void);
 
 /**
  * Receiving last byte from device
  *
  * returns: byte
  */
-unsigned char i2c_recv_last_byte(void);
+uint8_t i2c_readNak(void);
 
 
 #endif
