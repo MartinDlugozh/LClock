@@ -1,6 +1,7 @@
 # LClock
 
 Weather station with calendar and alarm clock.
+
 Main componnents:
  * AVR ATMega32 MCU;
  * DS3231 RTC (I2C);

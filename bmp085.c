@@ -149,10 +149,14 @@ void bmp085_read_rawtemperature(void){
  * get raw pressure as read by registers, and do some calculation to convert it
  */
 void bmp085_getrawpressure() {
+	//uint8_t buff[3];
+	//memset(buff, 0, sizeof(buff));
+	//int32_t up,x1,x2,x3,b3,b6,p;
+	//uint32_t b4,b7;
 	uint8_t buff[3];
 	memset(buff, 0, sizeof(buff));
-	long up,x1,x2,x3,b3,b6,p;
-	unsigned long b4,b7;
+	int32_t x1,x2,x3,b3,b6,p;
+	uint32_t b4,b7,up;
 
 	#if BMP085_AUTOUPDATETEMP == 1
 	bmp085_getrawtemperature();
@@ -163,20 +167,25 @@ void bmp085_getrawpressure() {
 	_delay_ms(2 + (3<<BMP085_MODE));
 
 	bmp085_readmem(BMP085_REGCONTROLOUTPUT, buff, 3);
-	up = ((((long)buff[0] <<16) | ((long)buff[1] <<8) | ((long)buff[2])) >> (8-BMP085_MODE)); // uncompensated pressure value
+	up = ((((uint32_t)buff[0] <<16) | ((uint32_t)buff[1] <<8) | ((uint32_t)buff[2])) >> (8-BMP085_MODE)); // uncompensated pressure value
 
 	//calculate raw pressure
 	b6 = bmp085_rawtemperature - 4000;
 	x1 = (bmp085_regb2* (b6 * b6) >> 12) >> 11;
 	x2 = (bmp085_regac2 * b6) >> 11;
 	x3 = x1 + x2;
-	b3 = (((((long)bmp085_regac1) * 4 + x3) << BMP085_MODE) + 2) >> 2;
+	b3 = (((((int32_t)bmp085_regac1) * 4 + x3) << BMP085_MODE) + 2) >> 2;
 	x1 = (bmp085_regac3 * b6) >> 13;
 	x2 = (bmp085_regb1 * ((b6 * b6) >> 12)) >> 16;
 	x3 = ((x1 + x2) + 2) >> 2;
 	b4 = (bmp085_regac4 * (uint32_t)(x3 + 32768)) >> 15;
 	b7 = ((uint32_t)up - b3) * (50000 >> BMP085_MODE);
-	p = b7 < 0x80000000 ? (b7 << 1) / b4 : (b7 / b4) << 1;
+	//p = b7 < 0x80000000 ? (b7 << 1) / b4 : (b7 / b4) << 1;
+	if (b7 < 0x80000000UL) {
+		p = (b7 << 1) / b4;
+	} else {
+		p = (b7 / b4) << 1;
+	}
 	x1 = (p >> 8) * (p >> 8);
 	x1 = (x1 * 3038) >> 16;
 	x2 = (-7357 * p) >> 16;
@@ -199,24 +208,29 @@ void bmp085_start_rawpressure(void){
 void bmp085_read_rawpressure(void){
 	uint8_t buff[3];
 	memset(buff, 0, sizeof(buff));
-	long up,x1,x2,x3,b3,b6,p;
-	unsigned long b4,b7;
+	int32_t x1,x2,x3,b3,b6,p,up;
+	uint32_t b4,b7;
 
 	bmp085_readmem(BMP085_REGCONTROLOUTPUT, buff, 3);
-	up = ((((long)buff[0] <<16) | ((long)buff[1] <<8) | ((long)buff[2])) >> (8-BMP085_MODE)); // uncompensated pressure value
+	up = ((((int32_t)buff[0] <<16) | ((int32_t)buff[1] <<8) | ((int32_t)buff[2])) >> (8-BMP085_MODE)); // uncompensated pressure value
 
 	//calculate raw pressure
 	b6 = bmp085_rawtemperature - 4000;
 	x1 = (bmp085_regb2* (b6 * b6) >> 12) >> 11;
 	x2 = (bmp085_regac2 * b6) >> 11;
 	x3 = x1 + x2;
-	b3 = (((((long)bmp085_regac1) * 4 + x3) << BMP085_MODE) + 2) >> 2;
+	b3 = (((((int32_t)bmp085_regac1) * 4 + x3) << BMP085_MODE) + 2) >> 2;
 	x1 = (bmp085_regac3 * b6) >> 13;
 	x2 = (bmp085_regb1 * ((b6 * b6) >> 12)) >> 16;
 	x3 = ((x1 + x2) + 2) >> 2;
 	b4 = (bmp085_regac4 * (uint32_t)(x3 + 32768)) >> 15;
 	b7 = ((uint32_t)up - b3) * (50000 >> BMP085_MODE);
-	p = b7 < 0x80000000 ? (b7 << 1) / b4 : (b7 / b4) << 1;
+	//p = b7 < 0x80000000 ? (b7 << 1) / b4 : (b7 / b4) << 1;
+	if (b7 < 0x80000000UL) {
+		p = (b7 << 1) / b4;
+	} else {
+		p = (b7 / b4) << 1;
+	}
 	x1 = (p >> 8) * (p >> 8);
 	x1 = (x1 * 3038) >> 16;
 	x2 = (-7357 * p) >> 16;
@@ -261,11 +275,15 @@ int32_t bmp085_getpressure() {
 		case BMPCS_PUNINIT:
 		{
 			bmp085_start_rawpressure();
+// 			_delay_ms(2 + (3<<BMP085_MODE));
+// 			bmp085_read_rawpressure();
 			break;
 		}
 		case BMPCS_PCONV:
 		{
-			bmp085_read_rawpressure();
+//			bmp085_start_rawpressure();
+// 			_delay_ms(2 + (3<<BMP085_MODE));
+ 			bmp085_read_rawpressure();
 			break;
 		}
 		default:

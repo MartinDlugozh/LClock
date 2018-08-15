@@ -15,7 +15,7 @@
 #define BLOCK_BTN() { btn_block = 1; sys_timer.btn_block = millis(); }
 
 #define DS18B20_CALIBRATION_OFFSET (int)(0)
-#define BMP180_CALIBRATION_OFFSET (int)(-2)
+#define BMP180_CALIBRATION_OFFSET (int)(0)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -127,6 +127,12 @@ void ds18b20_conv(void){
 		default:
 			break;
 	}
+}
+
+void bmp180_pressure_conv(void){
+	uint16_t _ptmp = 0;
+	_ptmp += (bmp085_getpressure()/100);
+	pressure = _ptmp;
 }
 
 void dispReload(dispMode_t dmode, setMode_t smode){
@@ -394,7 +400,7 @@ void encoder_on_inc(void){
 				temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
 			}
 			if(disp_mode == DMODE_PRESSURE){
-				pressure = bmp085_getpressure()/100;
+				//bmp180_pressure_conv();
 			}
 			break;
 		}
@@ -501,7 +507,7 @@ void encoder_on_dec(void){
 				temp_b = bmp085_gettemperature();
 			}
 			if(disp_mode == DMODE_PRESSURE){
-				pressure = bmp085_getpressure()/100;
+				//bmp180_pressure_conv();
 			}
 			break;
 		}
@@ -689,15 +695,15 @@ void loop_2Hz(void){
 	if(millis() >= sys_timer.loop_2Hz){
 		sys_timer.loop_2Hz = millis() + PERIOD_2HZ_MS;
 
-		if(disp_mode == DMODE_TEMPERATURE_A){
+//		if(disp_mode == DMODE_TEMPERATURE_A){
 			ds18b20_conv();
-		}
-		if(disp_mode == DMODE_TEMPERATURE_B){
+//		}
+//		if(disp_mode == DMODE_TEMPERATURE_B){
 			temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
-		}
-		if(disp_mode == DMODE_PRESSURE){
-			pressure = bmp085_getpressure()/100;
-		}
+//		}
+//		if(disp_mode == DMODE_PRESSURE){
+			bmp180_pressure_conv();
+//		}
 		dispReload(disp_mode, set_mode);
 	}
 }

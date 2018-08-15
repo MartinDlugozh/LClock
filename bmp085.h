@@ -49,7 +49,7 @@ Notes:
 #define BMP085_MODEULTRAHIGHRES 3 //oversampling=3, internalsamples=8, maxconvtimepressure=25.5ms, avgcurrent=12uA, RMSnoise_hPA=0.03, RMSnoise_m=0.25
 
 //autoupdate temperature enabled
-#define BMP085_AUTOUPDATETEMP 1 //autoupdate temperature every read
+#define BMP085_AUTOUPDATETEMP 0 //autoupdate temperature every read
 
 //setup parameters
 #define BMP085_MODE BMP085_MODEULTRAHIGHRES //define a mode
@@ -57,7 +57,7 @@ Notes:
 #define BMP085_UNITMOFFSET 0 //define a unit offset (m)
 
 //avarage filter
-#define BMP085_FILTERPRESSURE 1 //avarage filter for pressure
+#define BMP085_FILTERPRESSURE 0 //avarage filter for pressure
 
 typedef enum _bmp180_temp_conv_state{
 	BMPCS_TUNINIT = 0,
@@ -75,8 +75,6 @@ typedef enum _bmp180_press_conv_state{
 int bmp085_regac1, bmp085_regac2, bmp085_regac3, bmp085_regb1, bmp085_regb2, bmp085_regmb, bmp085_regmc, bmp085_regmd;
 unsigned int bmp085_regac4, bmp085_regac5, bmp085_regac6;
 long bmp085_rawtemperature, bmp085_rawpressure;
-
-
 
 //functions
 extern void loop_333Hz(void);
