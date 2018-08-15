@@ -8,5 +8,6 @@
 *.cproj
 *.log
 *.bak
+*.pdsbak
 
 ATMega32_LCC.componentinfo.xml
