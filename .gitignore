@@ -9,5 +9,6 @@
 *.log
 *.bak
 *.pdsbak
+Sim/*.pdsbak
 
 ATMega32_LCC.componentinfo.xml
