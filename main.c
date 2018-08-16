@@ -21,7 +21,7 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <time.h>
-#include <delay.h>
+#include <util/delay.h>
 
 #include <stdbool.h>
 
@@ -695,19 +695,13 @@ void loop_2Hz(void){
 	if(millis() >= sys_timer.loop_2Hz){
 		sys_timer.loop_2Hz = millis() + PERIOD_2HZ_MS;
 
-//		if(disp_mode == DMODE_TEMPERATURE_A){
-			ds18b20_conv();
-//		}
-//		if(disp_mode == DMODE_TEMPERATURE_B){
-			temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
-//		}
-//		if(disp_mode == DMODE_PRESSURE){
-			bmp180_pressure_conv();
-//		}
+		ds18b20_conv();
+		temp_b = bmp085_gettemperature()+BMP180_CALIBRATION_OFFSET;
+		bmp180_pressure_conv();
+
 		dispReload(disp_mode, set_mode);
 	}
 }
-
 
 /**
  * 1 Hz loop
@@ -796,7 +790,8 @@ int main(void)
 	set_mode = SMODE_NO;
 	dispReload(disp_mode, set_mode);
 
-	bmp085_init();		// start BMP180 pressure and temperature sensor
+	bmp085_init();		// start BMP180 pressure and temperature sensor; do i2c_init() before this!
+
 	// Main loop
     for(;;)
     {

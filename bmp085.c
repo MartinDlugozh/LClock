@@ -25,10 +25,6 @@
 bmp180_temp_conv_state_t bmp180_temp_conv_state = BMPCS_TUNINIT;
 bmp180_press_conv_state_t bmp180_press_conv_state = BMPCS_PUNINIT;
 
-void bmp085_idletask(void){
-	loop_333Hz();
-}
-
 /*
  * i2c write
  */
@@ -149,10 +145,6 @@ void bmp085_read_rawtemperature(void){
  * get raw pressure as read by registers, and do some calculation to convert it
  */
 void bmp085_getrawpressure() {
-	//uint8_t buff[3];
-	//memset(buff, 0, sizeof(buff));
-	//int32_t up,x1,x2,x3,b3,b6,p;
-	//uint32_t b4,b7;
 	uint8_t buff[3];
 	memset(buff, 0, sizeof(buff));
 	int32_t x1,x2,x3,b3,b6,p;
@@ -275,14 +267,10 @@ int32_t bmp085_getpressure() {
 		case BMPCS_PUNINIT:
 		{
 			bmp085_start_rawpressure();
-// 			_delay_ms(2 + (3<<BMP085_MODE));
-// 			bmp085_read_rawpressure();
 			break;
 		}
 		case BMPCS_PCONV:
 		{
-//			bmp085_start_rawpressure();
-// 			_delay_ms(2 + (3<<BMP085_MODE));
  			bmp085_read_rawpressure();
 			break;
 		}

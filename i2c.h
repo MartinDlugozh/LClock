@@ -13,7 +13,7 @@
 #define __I2C_H__
 
 #include <avr/io.h>
-#include <twi.h>
+#include <util/twi.h>
 
 /** defines the data direction (reading from I2C device) in i2c_start(),i2c_rep_start() */
 #define I2C_READ    1

@@ -72,13 +72,11 @@ typedef enum _bmp180_press_conv_state{
 }bmp180_press_conv_state_t;
 
 //variables
-int bmp085_regac1, bmp085_regac2, bmp085_regac3, bmp085_regb1, bmp085_regb2, bmp085_regmb, bmp085_regmc, bmp085_regmd;
-unsigned int bmp085_regac4, bmp085_regac5, bmp085_regac6;
-long bmp085_rawtemperature, bmp085_rawpressure;
+int16_t bmp085_regac1, bmp085_regac2, bmp085_regac3, bmp085_regb1, bmp085_regb2, bmp085_regmb, bmp085_regmc, bmp085_regmd;
+uint16_t bmp085_regac4, bmp085_regac5, bmp085_regac6;
+int32_t bmp085_rawtemperature, bmp085_rawpressure;
 
 //functions
-extern void loop_333Hz(void);
-void bmp085_idletask(void);
 extern void bmp085_init();
 extern int32_t bmp085_getpressure();
 extern double bmp085_getaltitude();
