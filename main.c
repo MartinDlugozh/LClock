@@ -676,8 +676,11 @@ void loop_100Hz(void){
 				{
 					alarm_is_on = ALARM_BLOCK;
 				}else{
-					upload_to_rtc();
-					disp_mode = DMODE_TIME;
+					if((disp_mode == DMODE_TIME) || (disp_mode == DMODE_DATE)){
+						upload_to_rtc();
+					}else{
+						disp_mode = DMODE_TIME;
+					}
 					set_mode = SMODE_NO;
 					dispReload(disp_mode, set_mode);
 				}
